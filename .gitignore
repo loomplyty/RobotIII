@@ -5,8 +5,7 @@ Makefile
 cmake_install.cmake
 install_manifest.txt
 
-TrjFile.txt
-ParsedFile.txt
+ 
 # for linux local file
 *~
 
@@ -52,3 +51,10 @@ bin
 # temp files
 .*.*.swp
 .*.swp
+
+#QT CREATOR
+*.config
+*.includes
+*.creator
+*.creator.user
+*.files
