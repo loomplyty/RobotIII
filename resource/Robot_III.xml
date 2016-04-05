@@ -708,6 +708,7 @@
             </SlaveType>
             <Slave>
                 <Motion1 type="ElmoSoloWhistle"  min_pos="0.676" max_pos="1.091" max_vel="0.2362" home_pos="0.676" input2count="22937600" abs_id="15"/>
+                <ForceSensor type="AtiForceSensor"/>
                 <Motion2 type="ElmoSoloWhistle"  min_pos="0.698" max_pos="1.112" max_vel="0.2362" home_pos="0.698" input2count="22937600" abs_id="17"/>
                 <Motion3 type="ElmoSoloWhistle"  min_pos="0.698" max_pos="1.112" max_vel="0.2362" home_pos="0.698" input2count="22937600" abs_id="16"/>
                 <Motion4 type="ElmoSoloWhistle"  min_pos="0.676" max_pos="1.091" max_vel="0.2362" home_pos="0.676" input2count="22937600" abs_id="12"/>
@@ -725,7 +726,6 @@
                 <Motion16 type="ElmoSoloWhistle" min_pos="0.698" max_pos="1.112" max_vel="0.2362" home_pos="0.698" input2count="22937600" abs_id=" 7"/>
                 <Motion17 type="ElmoSoloWhistle" min_pos="0.698" max_pos="1.112" max_vel="0.2362" home_pos="0.698" input2count="22937600" abs_id=" 8"/>
                 <Motion18 type="ElmoSoloWhistle" min_pos="0.676" max_pos="1.091" max_vel="0.2362" home_pos="0.676" input2count="22937600" abs_id=" 6"/>
-                <ForceSensor type="AtiForceSensor"/>
             </Slave>
         </EtherCat>
     </Controller>

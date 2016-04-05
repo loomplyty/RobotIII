@@ -48,18 +48,17 @@ void PushDoorSimplePlanner::InitParams()
     heightCOM      = 0.85;
     mActual        = 270;
     heightStep     = 0.04;
-    THalfStep      = 2.2;
+    THalfStep      = 2.3;
     tauFoothold    = 0.06;
-    Tshift         = 3;
-    LenShift       = -0.1;
-    longStepLength = -0.36;
+    longStepLength = -0.48;
+    pushStepLength = -0.3;
     velDetect      = -0.04;
-    TDetect        = 4;
+    TDetect        = 7;
     desiredOffset  = -0.08;
 
     robotFrontier  = -0.77;
-    xStage1        = longStepLength + desiredOffset + robotFrontier;
-    xStage2        = longStepLength + desiredOffset + robotFrontier + 0.1;
+    xStage1        = longStepLength -0.14 + robotFrontier;
+    xStage2        = longStepLength -0.14 + robotFrontier + 0.1;
 }
 
 int PushDoorSimplePlanner::Start(double timeNow)
@@ -165,7 +164,7 @@ int PushDoorSimplePlanner::DoIteration(
             gaitState = VGS_STOPPED;
             lastTDTime = 0;
         }
-        else if(fabs(fext[0]) > 20)
+        else if(fabs(fext[0]) > 15)
         {
             startTime = timeNow;
             detectedOffset = timeFromStart * velDetect;
@@ -193,6 +192,7 @@ int PushDoorSimplePlanner::DoIteration(
             pushCount = 0;
             lastTDTime = 0;
             startTime = timeNow;
+            heightStep = 0.08;
             is_ASP_BSW = !is_ASP_BSW; // switch the gait state
             // reserve the foothold position of the last half-step
             memcpy(lastsvFoothold, svFoothold, sizeof(svFoothold));
@@ -213,6 +213,8 @@ int PushDoorSimplePlanner::DoIteration(
         }
         else
         {
+            GetPivot(timeFromStart / (THalfStep*2), pivot, tmp1, tmp2);
+            heightCOM = 0.85 + pivot/3.1416 * 0.065;
             // Planning for the first half step
             // Update gait state
             if (timeFromStart - lastTDTime > THalfStep) // A half-step is completed
@@ -282,7 +284,7 @@ int PushDoorSimplePlanner::DoIteration(
         {
             // Body traj
             GetPivot(timeFromStart / (THalfStep*2), pivot, tmp1, tmp2);
-            svRobot[0] = lastEndingSvRobot[0] + pivot/3.1416 * longStepLength;
+            svRobot[0] = lastEndingSvRobot[0] + pivot/3.1416 * pushStepLength;
             svRobot[1] = 0; 
             svRobot[2] = 0; 
             // Planning for the first half step
@@ -302,7 +304,7 @@ int PushDoorSimplePlanner::DoIteration(
             if (is_ASP_BSW) // B legs are swinging
             {
                 svFootholdDot[2] = 0; 
-                svFoothold[2] = lastEndingSvFthd[2] + longStepLength; 
+                svFoothold[2] = lastEndingSvFthd[2] + pushStepLength;
                 svFootholdDot[3] = 0; 
                 svFoothold[3] = 0; 
 
@@ -312,7 +314,7 @@ int PushDoorSimplePlanner::DoIteration(
             else // A legs are swinging
             {
                 svFootholdDot[0] = 0; 
-                svFoothold[0] = lastEndingSvFthd[0] + longStepLength;
+                svFoothold[0] = lastEndingSvFthd[0] + pushStepLength;
                 svFootholdDot[1] = 0; 
                 svFoothold[1] = 0; 
 
@@ -717,13 +719,17 @@ void PushDoorSimplePlanner::CopyStates(U* stateVectorDest, T* stateVectorSrc, in
 
 double PushDoorSimplePlanner::GetTerrainHeightData(double x, double y)
 {
-    if (x < xStage1)
+    if (x < xStage1 - 0.175)
     {
-        return 0.0;
+        return 0.045;
+    }
+    else if (x < xStage1)
+    {
+        return 0.068;
     }
     else if ( x < xStage2 )
     {
-        return 0.0;
+        return 0.042;
     }
     return 0;
 }

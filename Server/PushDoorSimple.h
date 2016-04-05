@@ -52,10 +52,6 @@ private:
     static const double DISTANCE_COM_TO_FSR;
     // For body offset between the actual body and the model one, i.e. svRobot
     double bodyOffset[3];
-    
-    double Tshift;
-    double LenShift;
-
     // Gait planner state machine
     double startTime;
     double lastTDTime;
@@ -113,6 +109,7 @@ private:
     double tauFoothold;
     bool is_ASP_BSW;
     double longStepLength;
+    double pushStepLength;
     double velDetect;
     double TDetect;
     double desiredOffset;
