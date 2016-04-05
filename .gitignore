@@ -1,6 +1,54 @@
-*.config
-*.includes
-*.creator
-*.creator.user
-*.files
-/build/
+# for cmake
+CMakeCache.txt
+CMakeFiles
+Makefile
+cmake_install.cmake
+install_manifest.txt
+
+TrjFile.txt
+ParsedFile.txt
+# for linux local file
+*~
+
+# for c++
+
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# build and output dir
+build
+bin
+
+# python executables
+*.pyc
+
+# temp files
+.*.*.swp
+.*.swp

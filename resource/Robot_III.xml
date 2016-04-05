@@ -28,7 +28,7 @@
             <RFpe type="matrix">{ 0.0679295 , 0 , -0.3552145, PI/2,  PI* 1/6,   -PI/2-PI*7/18}</RFpe>
             <RMpe type="matrix">{ 0.1234141 , 0 ,  0,         PI/2,  PI* 0/6,   -PI/2-PI*7/18}</RMpe>
             <RRpe type="matrix">{ 0.0679295 , 0 ,  0.3532904, PI/2,  PI*11/6,   -PI/2-PI*7/18}</RRpe>
-            <ForceSensorMakPe type="matrix">{ 0,0,0,0,PI/2,0 }</ForceSensorMakPe>
+            <ForceSensorMakPe type="matrix">{ 0,0,0,PI,PI/2,0 }</ForceSensorMakPe>
             <BodyGamma type="matrix">{140,0,0,0,0,0,0,0,0,0}</BodyGamma>
             <P1aGamma type="matrix">{0,0,0,0,0,0,0,0,0,0}</P1aGamma>
             <P2aGamma type="matrix">{0,0,0,0,0,0,0,0,0,0}</P2aGamma>
@@ -535,7 +535,7 @@
             </wk>
             <us default="us_param">
               <us_param type="group">
-                <file type="string" abbreviation="f" default="/home/hex/Desktop/VisionStairs_Test_Good/resource/gaits/upstair.txt"/>
+                <file type="string" abbreviation="f" default="/home/hex/Desktop/RobotIII/resource/gaits/upstair.txt"/>
               </us_param>
             </us>
             <ro/>
@@ -594,6 +594,51 @@
                     <height abbreviation="h" type="double" default="0.05"/>
                 </tw_param>
             </tw>
+            <sh default="sh_param">
+                <sh_param type="group">
+                    <totalCount abbreviation="t" type="int" default="3000"/>
+                    <stepLength abbreviation="d" type="double" default="0.4"/>
+                    <stepHeight abbreviation="h" type="double" default="0.05"/>
+                    <bodyUp abbreviation="u" type="double" default="0.15"/>
+                    <bodyPitch abbreviation="p" type="double" default="20"/>
+                    <helloAmplitude abbreviation="a" type="double" default="0.1"/>
+                    <helloTimes abbreviation="n" type="int" default="1"/>
+                </sh_param>
+            </sh>
+            <sw default="sw_param">
+                <sw_param type="group">
+                    <totalCount abbreviation="t" type="int" default="8000"/>
+                    <xAngle abbreviation="x" type="double" default="0"/>
+                    <yAngle abbreviation="y" type="double" default="0"/>
+                    <zAngle abbreviation="z" type="double" default="0"/>
+                    <rDistance abbreviation="r" type="double" default="1.2"/>
+                    <yDistance abbreviation="d" type="double" default="0.1"/>
+                </sw_param>
+            </sw>
+            <psd>
+                <psd_param type="unique">
+                    <!-- Initialize the gait planner -->
+                    <i abbreviation="i" />
+                    <!-- Begin gait planning -->
+                    <b abbreviation="b" />
+                    <!-- End gait planning -->
+                    <e abbreviation="e" />
+                    <!-- Zero the force sensor-->
+                    <c abbreviation="c" />
+                </psd_param>
+            </psd>
+            <cpp>
+                <cpp_param type="unique">
+                    <!-- Initialize the gait planner -->
+                    <i abbreviation="i" />
+                    <!-- Begin gait planning -->
+                    <b abbreviation="b" />
+                    <!-- End gait planning -->
+                    <e abbreviation="e" />
+                    <!-- Zero the force sensor-->
+                    <c abbreviation="c" />
+                </cpp_param>
+            </cpp>
         </Commands>
     </Server>
     <Controller>
@@ -629,7 +674,7 @@
                         <homeMode index="0x6098" subindex="0" type="int8" config="-1"/>
                         <homeAcc index="0x609A" subindex="0" type="uint32" config="200000"/>
                         <homeHighSpeed index="0x6099" subindex="1" type="uint32" config="200000"/>
-                        <homeLowSpeed index="0x6099" subindex="2" type="uint32" config="100000"/>
+                        <homeLowSpeed index="0x6099" subindex="2" type="uint32" config="170000"/>
                         <RatioOfPosDivVel_Numerator index="0x6096" subindex="1" type="uint32" config="1"/>
                         <RatioOfPosDivVel_Divisor index="0x6096" subindex="2" type="uint32" config="1"/>
                         <homeTorqueLimit index="0x2020" subindex="1" type="int32" config="950"/>

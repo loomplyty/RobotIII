@@ -64,7 +64,7 @@ auto CWFGait(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &pa
     double forceOffsetAvg[6]{ 0 };
     double realForceData[6]{ 0 };
     double forceInBody[6];
-    const double forceThreshold[6]{ 40, 40, 40, 40, 40, 40 };//力传感器的触发阈值,单位N或Nm
+    const double forceThreshold[6]{ 40, 40, 40, 30, 30, 30 };//力传感器的触发阈值,单位N或Nm
     const double forceAMFactor{ 1 };//传感器数值与实际力大小的转化系数
     //const double sensorPE[6]{ 0, 0, 0, PI, PI/2, 0 };
 

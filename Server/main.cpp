@@ -24,6 +24,12 @@ using namespace std;
 #include "push_recovery.h"
 #include "continuous_move.h"
 #include "twist_waist.h"
+#include "say_hello.h"
+//zhaoyue
+#include "swing.h"
+//sunqiao
+#include "MovePushDoorSimple.h"
+#include "MoveCrowdPassingGait.h"
 
 using namespace aris::core;
 
@@ -254,6 +260,7 @@ int main(int argc, char *argv[])
 {   
     kinect1.start();
 
+    PushDoorSimple::PushDoorSimpleWrapper::StartReceiveData();
     std::string xml_address;
 
     if (argc <= 1)
@@ -300,6 +307,14 @@ int main(int argc, char *argv[])
     rs.addCmd("cmb", parseContinuousMoveBegin, continuousMove);
     rs.addCmd("cmj", parseContinuousMoveJudge, continuousMove);
     rs.addCmd("tw", twistWaistParse, twistWaistGait);
+    rs.addCmd("sh", sayHelloParse, sayHelloGait);
+    //zhaoyue
+    rs.addCmd("sw", swingParse, swingGait);
+    //sunqiao
+    rs.addCmd("psd", PushDoorSimple::PushDoorSimpleWrapper::ParseCmds,
+                     PushDoorSimple::PushDoorSimpleWrapper::GaitFunction);
+    rs.addCmd("cpp", CrowdPassing::CrowdPassingGaitWrapper::ParseCmds,
+                     CrowdPassing::CrowdPassingGaitWrapper::GaitFunction);
 
     rs.open();
 

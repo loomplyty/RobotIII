@@ -226,7 +226,7 @@ include_directories(${ALL_INCL_DIR})
 link_directories(${ALL_LINK_DIR})
 
 ################################### build server ####################################
-set(SOURCE_FILES main.cpp continuous_walk_with_force.cpp push_recovery.cpp interpolation.cpp continuous_move.cpp twist_waist.cpp)
+set(SOURCE_FILES main.cpp continuous_walk_with_force.cpp push_recovery.cpp interpolation.cpp continuous_move.cpp twist_waist.cpp say_hello.cpp swing.cpp MovePushDoorSimple.cpp PushDoorSimple.cpp MoveCrowdPassingGait.cpp CrowdPassingPlanner.cpp)
 PREPEND(FULL_SRC Server ${SOURCE_FILES})
 
 set(VISION_SOURCE_FILES Aris_Vision.cpp Vision_Control0.cpp Vision_Terrain0.cpp Vision_Gait0.cpp )
