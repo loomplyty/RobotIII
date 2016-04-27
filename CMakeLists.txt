@@ -235,7 +235,10 @@ PREPEND(VISION_FULL_SRC Aris_Vision ${VISION_SOURCE_FILES})
 set(MOTION_SOURCE_FILES Motions.cpp )
 PREPEND(MOTION_FULL_SRC  Server ${MOTION_SOURCE_FILES})
 
-add_executable(Server ${FULL_SRC} ${VISION_FULL_SRC} ${MOTION_FULL_SRC})
+set(REFLEX_SOURCE_FILES rofo2.cpp Gait.cpp Line.cpp Communication.cpp log.cpp Compatible.h log.h log_data.h)
+PREPEND(REFLEX_SRC  Server ${REFLEX_SOURCE_FILES})
+
+add_executable(Server ${FULL_SRC} ${VISION_FULL_SRC} ${MOTION_FULL_SRC} ${REFLEX_SRC})
 target_link_libraries(Server ${ALL_LINK_LIB})
 
 ################################### build client ####################################

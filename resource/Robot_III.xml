@@ -535,7 +535,7 @@
             </wk>
             <us default="us_param">
               <us_param type="group">
-                <file type="string" abbreviation="f" default="/home/hex/Desktop/RobotIII/resource/gaits/upstair.txt"/>
+                <file type="string" abbreviation="f" default="/home/hex/Desktop/RobotIII/resource/gaits/upstair_pitch_roll.txt"/>
               </us_param>
             </us>
             <ro/>
@@ -639,6 +639,23 @@
                     <c abbreviation="c" />
                 </cpp_param>
             </cpp>
+            <climb default="count">
+                <count abbreviation="c" type="int" default="1"/>
+            </climb>
+            <edcl/>
+            <ay>
+                <param type="group">
+                <param1 type="unique" default="all">
+                    <all abbreviation="a"/>
+                    <first abbreviation="f"/>
+                    <second abbreviation="s"/>
+                </param1>
+                <param2 type="unique" default="dy">
+                    <ay abbreviation="y" type="double" default="-0.85"/>
+                    <dy abbreviation="d" type="double" default="-0.05"/>
+                </param2>
+                </param>
+            </ay>
         </Commands>
     </Server>
     <Controller>
@@ -708,7 +725,6 @@
             </SlaveType>
             <Slave>
                 <Motion1 type="ElmoSoloWhistle"  min_pos="0.676" max_pos="1.091" max_vel="0.2362" home_pos="0.676" input2count="22937600" abs_id="15"/>
-                <ForceSensor type="AtiForceSensor"/>
                 <Motion2 type="ElmoSoloWhistle"  min_pos="0.698" max_pos="1.112" max_vel="0.2362" home_pos="0.698" input2count="22937600" abs_id="17"/>
                 <Motion3 type="ElmoSoloWhistle"  min_pos="0.698" max_pos="1.112" max_vel="0.2362" home_pos="0.698" input2count="22937600" abs_id="16"/>
                 <Motion4 type="ElmoSoloWhistle"  min_pos="0.676" max_pos="1.091" max_vel="0.2362" home_pos="0.676" input2count="22937600" abs_id="12"/>
@@ -726,6 +742,7 @@
                 <Motion16 type="ElmoSoloWhistle" min_pos="0.698" max_pos="1.112" max_vel="0.2362" home_pos="0.698" input2count="22937600" abs_id=" 7"/>
                 <Motion17 type="ElmoSoloWhistle" min_pos="0.698" max_pos="1.112" max_vel="0.2362" home_pos="0.698" input2count="22937600" abs_id=" 8"/>
                 <Motion18 type="ElmoSoloWhistle" min_pos="0.676" max_pos="1.091" max_vel="0.2362" home_pos="0.676" input2count="22937600" abs_id=" 6"/>
+                <ForceSensor type="AtiForceSensor"/>
             </Slave>
         </EtherCat>
     </Controller>

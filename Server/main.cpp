@@ -30,7 +30,7 @@ using namespace std;
 //sunqiao
 #include "MovePushDoorSimple.h"
 #include "MoveCrowdPassingGait.h"
-
+#include "rofo2.h"
 using namespace aris::core;
 
 aris::sensor::KINECT kinect1;
@@ -316,6 +316,10 @@ int main(int argc, char *argv[])
     rs.addCmd("cpp", CrowdPassing::CrowdPassingGaitWrapper::ParseCmds,
                      CrowdPassing::CrowdPassingGaitWrapper::GaitFunction);
 
+    rs.addCmd("climb",rofoParse,rofoGait);
+    rs.addCmd("edcl", rofoEndParse,rofoEndGait);
+    rs.addCmd("ay",ayParse,ayGait);
+    RofoWalkInit();
     rs.open();
 
     rs.setOnExit([&]()
