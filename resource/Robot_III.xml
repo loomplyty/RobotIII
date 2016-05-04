@@ -550,6 +550,13 @@
                 </cwf_param>
             </cwf>
             <cwfs/>
+            <ph default="ph_param">
+                <ph_param type="group">
+                    <totalCount abbreviation="t" type="int" default="2000"/>
+                    <holeDepth abbreviation="d" type="double" default="0.1"/>
+                    <contactForce abbreviation="f" type="double" default="20"/>
+                </ph_param>
+            </ph>
             <pr default="pr_param">
                 <pr_param type="group">
                     <pushCount abbreviation="p" type="int" default="1000"/>
@@ -615,6 +622,23 @@
                     <yDistance abbreviation="d" type="double" default="0.1"/>
                 </sw_param>
             </sw>
+            <climb default="count">
+                <count abbreviation="c" type="int" default="1"/>
+            </climb>
+            <edcl/>
+            <ay>
+                <param type="group">
+                <param1 type="unique" default="all">
+                    <all abbreviation="a"/>
+                    <first abbreviation="f"/>
+                    <second abbreviation="s"/>
+                </param1>
+                <param2 type="unique" default="dy">
+                    <ay abbreviation="y" type="double" default="-0.85"/>
+                    <dy abbreviation="d" type="double" default="-0.05"/>
+                </param2>
+                </param>
+            </ay>
             <psd>
                 <psd_param type="unique">
                     <!-- Initialize the gait planner -->
@@ -639,23 +663,7 @@
                     <c abbreviation="c" />
                 </cpp_param>
             </cpp>
-            <climb default="count">
-                <count abbreviation="c" type="int" default="1"/>
-            </climb>
-            <edcl/>
-            <ay>
-                <param type="group">
-                <param1 type="unique" default="all">
-                    <all abbreviation="a"/>
-                    <first abbreviation="f"/>
-                    <second abbreviation="s"/>
-                </param1>
-                <param2 type="unique" default="dy">
-                    <ay abbreviation="y" type="double" default="-0.85"/>
-                    <dy abbreviation="d" type="double" default="-0.05"/>
-                </param2>
-                </param>
-            </ay>
+
         </Commands>
     </Server>
     <Controller>

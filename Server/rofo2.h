@@ -10,7 +10,7 @@
 #include <Robot_Base.h>
 #include <Robot_Type_I.h>
 #include "Compatible.h"
-
+//#include "RofoConfig.h"
 
 
 using namespace aris::core;
@@ -21,6 +21,8 @@ extern bool IsRofoEnd;
 
 extern LogData temp_log_data;
 
+
+namespace Rofo {
 
 
 
@@ -86,5 +88,5 @@ auto rofoEndGait(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase
 auto ayParse(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)->void;
 auto ayGait(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)->int;
 
-
+}
 #endif

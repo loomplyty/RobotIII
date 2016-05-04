@@ -25,6 +25,7 @@ using namespace std;
 #include "continuous_move.h"
 #include "twist_waist.h"
 #include "say_hello.h"
+#include "peg_in_hole.h"
 //zhaoyue
 #include "swing.h"
 //sunqiao
@@ -299,6 +300,10 @@ int main(int argc, char *argv[])
     rs.addCmd("vwk", visionWalkParse, visionWalk);
     rs.addCmd("swk", stopVisionWalkParse, visionWalk);
 
+    rs.addCmd("climb",Rofo::rofoParse,Rofo::rofoGait);
+    rs.addCmd("edcl", Rofo::rofoEndParse,Rofo::rofoEndGait);
+    rs.addCmd("ay",Rofo::ayParse,Rofo::ayGait);
+
     //liujimu's gaits
     rs.addCmd("cwf", CWFParse, CWFGait);
     rs.addCmd("cwfs", CWFStopParse, CWFGait);
@@ -308,6 +313,7 @@ int main(int argc, char *argv[])
     rs.addCmd("cmj", parseContinuousMoveJudge, continuousMove);
     rs.addCmd("tw", twistWaistParse, twistWaistGait);
     rs.addCmd("sh", sayHelloParse, sayHelloGait);
+    rs.addCmd("ph", pegInHoleParse, pegInHoleGait);
     //zhaoyue
     rs.addCmd("sw", swingParse, swingGait);
     //sunqiao
@@ -316,10 +322,8 @@ int main(int argc, char *argv[])
     rs.addCmd("cpp", CrowdPassing::CrowdPassingGaitWrapper::ParseCmds,
                      CrowdPassing::CrowdPassingGaitWrapper::GaitFunction);
 
-    rs.addCmd("climb",rofoParse,rofoGait);
-    rs.addCmd("edcl", rofoEndParse,rofoEndGait);
-    rs.addCmd("ay",ayParse,ayGait);
-    RofoWalkInit();
+
+    Rofo::RofoWalkInit();
     rs.open();
 
     rs.setOnExit([&]()

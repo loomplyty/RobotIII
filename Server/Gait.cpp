@@ -25,6 +25,7 @@ char GAIT_NAME[][80]={
     "GAIT_MAJOR_DOWN",
     "GAIT_MINOR_DOWN",
     "GAIT_MINOR_UP_BACKWARD",
+    "GAIT_MINOR_UP_FORWARD",
     "GAIT_STRAIGHT",
     "GAIT_LOCAL_CYCLE_FOREWARD",
     "GAIT_LOCAL_CYCLE_BACKWARD",
@@ -839,9 +840,19 @@ void force_gait::GaitRobot::model_evaluation(Robots::RobotTypeI& robot,aris::dyn
         //GaitPartLeg[i].thrZ.threshold(LegState[i].footForceM[2]);//
 */
 
+
+
+
+        for(int j=0;j<3;j++)
+        {
+            this->foot_external_force_filter[i][j].FeedData(leg_status[i].foot_external_force_ref_coord[j]);
+            this->foot_external_force_filter[i][j].GetData(leg_status[i].foot_external_force_ref_coord[j]);
+        }
+
+
         // changed for fastdyn
         gait_part_leg[i].threshold_y_positive.threshold(leg_status[i].foot_external_force_ref_coord[1]);
-        gait_part_leg[i].thrsehold_z_positive.threshold(leg_status[i].foot_external_force_ref_coord[2]);
+        gait_part_leg[i].threshold_z_positive.threshold(leg_status[i].foot_external_force_ref_coord[2]);
         gait_part_leg[i].threshold_z_negative.threshold(leg_status[i].foot_external_force_ref_coord[2]);
 
         //log
@@ -945,6 +956,7 @@ void force_gait::GaitRobot::run_gait_robot(
 
     robotStateMachine.m_NextState=this->next_motion;
     this->next_motion=this->robot_motion_maker(cmd);
+    next_motion=ERS_GBWD;
 
     //    if(data.time%2000==0)
     //    {
@@ -1638,6 +1650,682 @@ void force_gait::GaitRobot::run_gait_robot(
         }
         break;
     }
+    case ERS_GBWD:
+    {
+        // we need update standstiildata in case now it is able to switch to this state at any time
+        this->set_standstill_data(data);
+
+
+        if(this->current_motion!=ERS_GBWD)
+        {
+            this->obstacle_gait_status_next=OG_INIT;
+            this->obstacle_gait_status_current=OG_INIT;
+
+            rt_printf("ERS_GBWD\n");
+            // start write log data while the robot is going forward
+            // data.IsLogging=true;
+        }
+        switch(obstacle_gait_status_next)
+        {
+        case OG_INIT:
+        {
+            //rbt.ground()  robot's cooridnates in the ground cooridnate frame
+            //rbt.body()    robot's cooridnates in the body coordinate frame
+            rt_printf("ERS_GBWD OG_INIT\n");
+            beginMak.setPrtPm(*robot.body().pm());
+            beginMak.update();
+
+#ifdef IMU
+            param.imu_data->toEulBody2Ground(imuEul,PI);
+            bodyPeCurrent[3]=imuEul[0];
+            bodyPeCurrent[4]=imuEul[1];
+            bodyPeCurrent[5]=imuEul[2];
+#endif
+            //Maybe this line will fix the incontinous problem
+            robot.GetPeb(this->bodyPeCurrent,beginMak);
+
+            for(int i=0;i<6;i++)
+            {
+                BodyPeG[i]=this->bodyPeCurrent[i];
+            }
+
+            rt_printf("IMU DATA %f %f %f\n",imu_euler_angles[0],imu_euler_angles[1],imu_euler_angles[2]);
+
+
+            rt_printf("BodyPeG:%f,%f,%f,%f,%f,%f\n",
+                      BodyPeG[0],BodyPeG[1],BodyPeG[2],
+                    BodyPeG[3],BodyPeG[4],BodyPeG[5]);
+            rt_printf("time: %lld\n",data.time);
+            rt_printf("first feedback position: %d\n",data.feedbackData[0].Position);
+
+
+
+            this->start_time=data.time;
+            this->current_motion=ERS_GBWD;
+
+
+            // [currentGaitInfo] should not be directly set.
+            // it is modified by FirstInitGait
+            //
+            // [nextGaitInfo] is the candidate of currentGaitInfo
+            // and it is referenced in FirstInitGait
+            //
+            // [nextGaitInfoPos] and [nextGaitInfoForce] is referenced in GaitPart.RunGait
+            //
+            this->gait_part_leg[LF].next_gait_info_by_position=
+                    this->gait_part_leg[LF].gl_MAJOR_BACKWARD;
+            this->gait_part_leg[LR].next_gait_info_by_position=
+                    this->gait_part_leg[LR].gl_MAJOR_BACKWARD;
+            this->gait_part_leg[RM].next_gait_info_by_position=
+                    this->gait_part_leg[RM].gl_MAJOR_BACKWARD;
+            rt_printf("%d %d\n",gait_part_leg[LF].next_gait_info_by_position.gait
+                      ,GAIT_MAJOR_BACKWARD);
+            //used in this gait
+            this->gait_part_leg[LF].next_gait_info_by_force=
+                    this->gait_part_leg[LF].gl_MINOR_UP_FORWARD;
+            this->gait_part_leg[LR].next_gait_info_by_force=
+                    this->gait_part_leg[LR].gl_MINOR_UP_FORWARD;
+            this->gait_part_leg[RM].next_gait_info_by_force=
+                    this->gait_part_leg[RM].gl_MINOR_UP_FORWARD;
+
+            this->gait_part_leg[LF].current_gait_info=
+                    this->gait_part_leg[LF].gl_MAJOR_UP;
+            this->gait_part_leg[LR].current_gait_info=
+                    this->gait_part_leg[LR].gl_MAJOR_UP;
+            this->gait_part_leg[RM].current_gait_info=
+                    this->gait_part_leg[RM].gl_MAJOR_UP;
+
+            this->gait_part_leg[LF].next_gait_info=
+                    this->gait_part_leg[LF].gl_MAJOR_UP;
+            this->gait_part_leg[LR].next_gait_info=
+                    this->gait_part_leg[LR].gl_MAJOR_UP;
+            this->gait_part_leg[RM].next_gait_info=
+                    this->gait_part_leg[RM].gl_MAJOR_UP;
+            //MAJOR_UP need some modifactions
+            // this is needed becasue every cycle init state is irregular
+            // the progress is according to the current height and speed
+            // decide the destiny pos and totalsteps
+
+            this->gait_part_leg[LM].current_gait_info=
+                    this->gait_part_leg[LM].gl_STANDSTILL;
+            this->gait_part_leg[RF].current_gait_info=
+                    this->gait_part_leg[RF].gl_STANDSTILL;
+            this->gait_part_leg[RR].current_gait_info=
+                    this->gait_part_leg[RR].gl_STANDSTILL;
+            this->gait_part_leg[LM].next_gait_info=
+                    this->gait_part_leg[LM].gl_STANDSTILL;
+            this->gait_part_leg[RF].next_gait_info=
+                    this->gait_part_leg[RF].gl_STANDSTILL;
+            this->gait_part_leg[RR].next_gait_info=
+                    this->gait_part_leg[RR].gl_STANDSTILL;
+
+            //init actions
+            for(int i=0;i<6;i++)
+            {
+                gait_part_leg[i].is_active=false;
+                init_gait(gait_part_leg[i],gait_part_leg[i].next_gait_info,data.time);
+            }
+
+
+            bEE[0]=bodyPeLast[0];
+            bEE[1]=bodyPeLast[1];
+            bEE[2]=bodyPeLast[2];
+            bEE[3]=bodyPeLast[3];
+            bEE[4]=bodyPeLast[4];
+            bEE[5]=bodyPeLast[5];
+
+            this->gait_part_body.current_gait_info=this->gait_part_body.gb_STANDSTILL;
+            gait_part_body.set_original_position(BodyPeG);
+            gait_part_body.set_destiny_position(gait_part_body.current_gait_info.delta_position);
+            gait_part_body.set_start_time(data.time);
+
+            //normal run
+
+
+        }
+            //break;
+        case OG_FIRSTMOTION:
+
+        {
+            //transition from OG_INIT
+            if(obstacle_gait_status_current!=OG_FIRSTMOTION)
+            {
+                obstacle_gait_status_next=OG_FIRSTMOTION;
+                obstacle_gait_status_current=OG_FIRSTMOTION;
+            }
+            //            auto imudata=imu.getSensorData();
+            //            imudata.get().toEulBody2Ground(imuEul,PI);
+
+#ifdef IMU
+            param.imu_data->toEulBody2Ground(imuEul,PI);
+            bodyPeCurrent[3]=imuEul[0];
+            bodyPeCurrent[4]=imuEul[1];
+            bodyPeCurrent[5]=imuEul[2];
+#endif
+
+            for(int i=0;i<6;i++)
+            {
+                BodyPeG[i]=this->bodyPeCurrent[i];
+            }
+
+            // above is ok
+
+            //generate next leg point
+            this->gait_part_leg[LF].get_next_target_position(this->gait_part_leg[LF].next_target_position,data.time,this->leg_status[LF]);
+            this->gait_part_leg[LM].get_next_target_position(this->gait_part_leg[LM].next_target_position,data.time,this->leg_status[LM]);
+            this->gait_part_leg[LR].get_next_target_position(this->gait_part_leg[LR].next_target_position,data.time,this->leg_status[LR]);
+            this->gait_part_leg[RF].get_next_target_position(this->gait_part_leg[RF].next_target_position,data.time,this->leg_status[RF]);
+            this->gait_part_leg[RM].get_next_target_position(this->gait_part_leg[RM].next_target_position,data.time,this->leg_status[RM]);
+            this->gait_part_leg[RR].get_next_target_position(this->gait_part_leg[RR].next_target_position,data.time,this->leg_status[RR]);
+
+
+            // above is ok
+
+            debug_print_gait_part_state(&data.time);
+
+            //detect and switching gait
+            for(int i=0;i<6;i++)
+            {
+                //IsSwitching and m_NextGaitInfo is set by legGait[i].RunGait(); TBD!!!!!!!!!!!!!!!!!!!!!!!!!
+                if(gait_part_leg[i].is_need_switching)
+                {
+                    init_gait(gait_part_leg[i],gait_part_leg[i].next_gait_info,data.time);
+
+                }
+            }
+
+
+
+
+
+            //generate next body point
+            gait_part_body.get_next_target_position(gait_part_body.next_target_position,data.time,this->body_status);
+
+
+            //above is ok
+
+            //calculate next pIN
+            for(int i=0;i<6;i++)
+            {
+                bodyPeCurrent[i]=gait_part_body.next_target_position[i];
+                BodyPeG[i]=gait_part_body.next_target_position[i];
+                bodyPeLast[i]=gait_part_body.next_target_position[i];
+
+            }
+
+
+            get_target_pee_robot(pEE);
+
+            robot.SetPeb(gait_part_body.next_target_position,beginMak);
+
+            robot.SetPee(pEE,beginMak);
+
+
+
+            if(data.time==start_time)
+            {
+                debug_print_ee_actual_target(&data.time);
+            }
+            if(data.time==(start_time+1000))
+            {
+                debug_print_ee_actual_target(&data.time);
+            }
+
+            //            Robot.SetPee(pEE,GaitPartBody.targetEndPos,"G");
+            //            Robot.GetPin(pIN);
+            //            for(int i=0;i<18;i++)
+            //            {
+            //                m_commandModelDataMapped[i].Postion=pIN[i];
+            //            }
+
+            //            PostProcess(data);
+
+            //            //for safe
+            //            this->Safety(data);
+
+
+            // end jump section for test only
+            int Count;
+            Count=0;
+            for(int i=0;i<6;i++)
+            {
+                if(this->gait_part_leg[i].current_gait_info.gait==GAIT_STANDSTILL)
+                {
+                    Count++;
+                }
+            }
+            if(Count==6)
+            {
+                obstacle_gait_status_next=OG_BODYMOTION;
+                rt_printf("Change to body motion %f,%f,%f",pEE[0],pEE[1],pEE[2]);
+            }
+
+            //above is the error, let's hunt it down.
+
+
+
+            break;
+        }
+        case OG_BODYMOTION:
+        {
+            if(obstacle_gait_status_current!=OG_BODYMOTION)
+            {
+                //                auto imudata=imu.getSensorData();
+                //                imudata.get().toEulBody2Ground(imuEul,PI);
+#ifdef IMU
+                param.imu_data->toEulBody2Ground(imuEul,PI);
+                bodyPeCurrent[3]=imuEul[0];
+                bodyPeCurrent[4]=imuEul[1];
+                bodyPeCurrent[5]=imuEul[2];
+#endif
+                for(int i=0;i<6;i++)
+                {
+                    BodyPeG[i]=this->bodyPeCurrent[i];
+                };
+
+                rt_printf("body_motion begin\n");
+                obstacle_gait_status_current=OG_BODYMOTION;
+                //first cycle
+                //in this stage pEE will use previous one,do not change it
+
+                //                GaitPartBody.currentGaitInfo.deltaPos[2]=
+                //                        LegState[LF].footPosM[2]-
+                //                        GaitPartLeg[LF].obstacleRefPosM[2];
+
+
+                gait_part_body.current_gait_info=gait_part_body.gb_MAJOR_BACKWARD;
+                rt_printf("Body deltaPos z:%f\n",gait_part_body.current_gait_info.delta_position[2]);
+                gait_part_body.current_gait_info.delta_position[2]=
+                        leg_status[LF].foot_position_ref_coord[2]-
+                        gait_part_leg[LF].gait_ref_position_body_coord[2];
+                // deltaPos[4] is the 1 in 313
+                // change it here and the BodyEpG will be assigned with this value
+//                gait_part_body.current_gait_info.delta_position[4]=-imu_euler_angles[2];
+                //for 805
+                //                GaitPartBody.currentGaitInfo.deltaPos[2]=-0.2;
+                rt_printf("Body deltaPos z:%f\n",gait_part_body.current_gait_info.delta_position[2]);
+
+
+
+
+
+                rt_printf("IMU DATA %f %f %f\n",imu_euler_angles[0],imu_euler_angles[1],imu_euler_angles[2]);
+
+                init_gait(gait_part_body,gait_part_body.current_gait_info,data.time);
+
+
+                bEE[0]=bodyPeLast[0];
+                bEE[1]=bodyPeLast[1];
+                bEE[2]=bodyPeLast[2];
+                bEE[3]=bodyPeLast[3];
+                bEE[4]=bodyPeLast[4];
+                bEE[5]=bodyPeLast[5];
+
+
+                //                rt_printf("body origin:%f,%f,%f,%f,%f,%f\n",
+                //                          bEE[0],bEE[1],bEE[2],
+                //                        bEE[3],bEE[4],bEE[5]);
+                //                GaitPartBody.totalSteps=GaitPartBody.currentGaitInfo.totalSteps;
+                //                GaitPartBody.SetOriginPos(bodyEpLast);
+                //                GaitPartBody.IsNeedSwitching=false;
+                //                GaitPartBody.totalSteps=GaitPartBody.currentGaitInfo.deltaPos[5]/
+                //                        GaitPartBody.currentGaitInfo.speed[5];
+                rt_printf("Body Motion Steps %d\n",gait_part_body.total_steps);
+                //                GaitPartBody.totalSteps=4000;
+                //                GaitPartBody.SetDestinyPos(GaitPartBody.currentGaitInfo.deltaPos);
+                //                rt_printf("body origin:%f,%f,%f,%f,%f,%f\n",
+                //                        GaitPartBody.originEndPos[0],
+                //                        GaitPartBody.originEndPos[1],
+                //                        GaitPartBody.originEndPos[2],
+                //                        GaitPartBody.originEndPos[3],
+                //                        GaitPartBody.originEndPos[4],
+                //                        GaitPartBody.originEndPos[5]);
+                //                rt_printf("body dest:%f,%f,%f,%f,%f,%f\n",
+                //                        GaitPartBody.destEndPos[0],
+                //                        GaitPartBody.destEndPos[1],
+                //                        GaitPartBody.destEndPos[2],
+                //                        GaitPartBody.destEndPos[3],
+                //                        GaitPartBody.destEndPos[4],
+                //                        GaitPartBody.destEndPos[5]);
+                //                GaitPartBody.SetStartTime(data.time);
+
+                //normal
+                rt_printf("before GetAllPee %f,%f,%f\n",pEE[0],pEE[1],pEE[2]);
+                get_target_pee_robot(pEE);
+                rt_printf("after GetAllPee %f,%f,%f\n",pEE[0],pEE[1],pEE[2]);
+
+                gait_part_body.get_next_target_position(gait_part_body.next_target_position,data.time,this->body_status);
+                rt_printf("body:%f,%f,%f,%f,%f,%f\n",bEE[0],bEE[1],bEE[2],
+                        bEE[3],bEE[4],bEE[5]);
+                // modify here for x-sin(x) change target end pos
+
+                BodyMotionStartTime=data.time;
+                BodyMotionCurrentTime=(int)(data.time-BodyMotionStartTime);
+                double bmtime
+                        =((double)BodyMotionCurrentTime)
+                        /((double)BodyMotionLength)
+                        *2.0*3.1415926;
+                gait_part_body.next_target_position[2]
+                        =gait_part_body.current_gait_info.delta_position[2]
+                        *1.0/(2.0*3.1415926)*(bmtime-sin(bmtime))
+                        +gait_part_body.original_position[2];
+
+//                gait_part_body.next_target_position[4]
+//                        =gait_part_body.current_gait_info.delta_position[4]
+//                        *1.0/(2.0*3.1415926)*(bmtime-sin(bmtime))
+//                        +gait_part_body.original_position[4];
+
+
+                //calculate next pIN
+                for(int i=0;i<6;i++)
+                {
+                    BodyPeG[i]=gait_part_body.next_target_position[i];
+                    bodyPeCurrent[i]=gait_part_body.next_target_position[i];
+                    bodyPeLast[i]=gait_part_body.next_target_position[i];
+                }
+
+
+
+                robot.SetPeb(gait_part_body.next_target_position,beginMak);
+                robot.SetPee(pEE,beginMak);
+
+                //                Robot.SetPee(pEE,GaitPartBody.targetEndPos,"G");
+                if(gait_part_body.current_step<10)
+                {
+                    rt_printf("pEE:%f\n",pEE[0]);
+                }
+                //                Robot.GetPin(pIN);
+                //                for(int i=0;i<18;i++)
+                //                {
+                //                    m_commandModelDataMapped[i].Postion=pIN[i];
+                //                }
+
+                //                PostProcess(data);
+
+                //                //for safe
+                //                this->Safety(data);
+
+                if(gait_part_body.is_need_switching)
+                {
+                    gait_part_body.current_gait_info=gait_part_body.gb_STANDSTILL;
+                    gait_part_body.next_gait_info_by_force=gait_part_body.gb_STANDSTILL;
+                    gait_part_body.next_gait_info_by_position=gait_part_body.gb_STANDSTILL;
+                    gait_part_body.set_original_position(bodyPeLast);
+                }
+            }
+            else
+            {
+
+                //                auto imudata=imu.getSensorData();
+                //                imudata.get().toEulBody2Ground(imuEul,PI);
+#ifdef IMU
+                param.imu_data->toEulBody2Ground(imuEul,PI);
+                bodyPeCurrent[3]=imuEul[0];
+                bodyPeCurrent[4]=imuEul[1];
+                bodyPeCurrent[5]=imuEul[2];
+#endif
+                for(int i=0;i<6;i++)
+                {
+                    BodyPeG[i]=this->bodyPeCurrent[i];
+                }
+
+                //normal
+                get_target_pee_robot(pEE); // pEE will not change in this stage
+                gait_part_body.get_next_target_position(gait_part_body.next_target_position,data.time,this->body_status);
+
+                BodyMotionCurrentTime=(int)(data.time-BodyMotionStartTime);
+                double bmtime
+                        =((double)BodyMotionCurrentTime)
+                        /((double)BodyMotionLength)
+                        *2.0*3.1415926;
+                gait_part_body.next_target_position[2]
+                        =gait_part_body.current_gait_info.delta_position[2]
+                        *1.0/(2.0*3.1415926)*(bmtime-sin(bmtime))
+                        +gait_part_body.original_position[2];
+
+//                gait_part_body.next_target_position[4]
+//                        =gait_part_body.current_gait_info.delta_position[4]
+//                        *1.0/(2.0*3.1415926)*(bmtime-sin(bmtime))
+//                        +gait_part_body.original_position[4];
+                //calculate next pIN
+
+                for(int i=0;i<6;i++)
+                {
+                    BodyPeG[i]=gait_part_body.next_target_position[i];
+                    bodyPeCurrent[i]=gait_part_body.next_target_position[i];
+                    bodyPeLast[i]=gait_part_body.next_target_position[i];
+                }
+                robot.SetPeb(gait_part_body.next_target_position,beginMak);
+                robot.SetPee(pEE,beginMak);
+                //                Robot.SetPee(pEE,GaitPartBody.targetEndPos,"G");
+
+                //                Robot.GetPin(pIN);
+                //                for(int i=0;i<18;i++)
+                //                {
+                //                    m_commandModelDataMapped[i].Postion=pIN[i];
+                //                }
+
+                //                PostProcess(data);
+
+                //                //for safe
+                //                this->Safety(data);
+
+
+
+                //                if(GaitPartBody.IsNeedSwitching)
+                //                {
+                //                    GaitPartBody.currentGaitInfo=GaitPartBody.gb_STANDSTILL;
+                //                    GaitPartBody.nextGaitInfoForce=GaitPartBody.gb_STANDSTILL;
+                //                    GaitPartBody.nextGaitInfoPos=GaitPartBody.gb_STANDSTILL;
+                //                    GaitPartBody.SetOriginPos(bodyPeLast);
+
+                //                    obstacleGaitStateNext=OG_SECONDMOTION;
+                //                    GaitPartBody.IsNeedSwitching=false;
+                //                }
+                if(BodyMotionCurrentTime>=BodyMotionLength)
+                {
+                    gait_part_body.current_gait_info=gait_part_body.gb_STANDSTILL;
+                    gait_part_body.next_gait_info_by_force=gait_part_body.gb_STANDSTILL;
+                    gait_part_body.next_gait_info_by_position=gait_part_body.gb_STANDSTILL;
+                    gait_part_body.set_original_position(bodyPeLast);
+
+                    obstacle_gait_status_next=OG_SECONDMOTION;
+                    gait_part_body.is_need_switching=false;
+
+                }
+            }
+            break;
+        }
+        case OG_SECONDMOTION:
+        {
+            if(obstacle_gait_status_current!=OG_SECONDMOTION)
+            {
+                rt_printf("Second Motion begin\n");
+#ifdef IMU
+                param.imu_data->toEulBody2Ground(imuEul,PI);
+                bodyPeCurrent[3]=imuEul[0];
+                bodyPeCurrent[4]=imuEul[1];
+                bodyPeCurrent[5]=imuEul[2];
+#endif
+                for(int i=0;i<6;i++)
+                {
+                    BodyPeG[i]=this->bodyPeCurrent[i];
+                }
+
+
+                rt_printf("IMU DATA %f %f %f\n",imu_euler_angles[0],imu_euler_angles[1],imu_euler_angles[2]);
+
+                obstacle_gait_status_current=OG_SECONDMOTION;
+
+                this->gait_part_leg[RF].next_gait_info_by_position=
+                        this->gait_part_leg[RF].gl_MAJOR_BACKWARD;
+                this->gait_part_leg[RR].next_gait_info_by_position=
+                        this->gait_part_leg[RR].gl_MAJOR_BACKWARD;
+                this->gait_part_leg[LM].next_gait_info_by_position=
+                        this->gait_part_leg[LM].gl_MAJOR_BACKWARD;
+
+
+
+                //not used in this gait
+                this->gait_part_leg[RF].next_gait_info_by_force=
+                        this->gait_part_leg[RF].gl_MINOR_UP_FORWARD;
+                this->gait_part_leg[RR].next_gait_info_by_force=
+                        this->gait_part_leg[RR].gl_MINOR_UP_FORWARD;
+                this->gait_part_leg[LM].next_gait_info_by_force=
+                        this->gait_part_leg[LM].gl_MINOR_UP_FORWARD;
+
+                this->gait_part_leg[RF].current_gait_info=
+                        this->gait_part_leg[RF].gl_MAJOR_UP;
+                this->gait_part_leg[RR].current_gait_info=
+                        this->gait_part_leg[RR].gl_MAJOR_UP;
+                this->gait_part_leg[LM].current_gait_info=
+                        this->gait_part_leg[LM].gl_MAJOR_UP;
+
+                this->gait_part_leg[RF].next_gait_info=
+                        this->gait_part_leg[RF].gl_MAJOR_UP;
+                this->gait_part_leg[RR].next_gait_info=
+                        this->gait_part_leg[RR].gl_MAJOR_UP;
+                this->gait_part_leg[LM].next_gait_info=
+                        this->gait_part_leg[LM].gl_MAJOR_UP;
+                //MAJOR_UP need some modifactions
+                // this is needed becasue every cycle init state is irregular
+                // the progress is according to the current height and speed
+                // decide the destiny pos and totalsteps
+
+                this->gait_part_leg[RM].current_gait_info=
+                        this->gait_part_leg[RM].gl_STANDSTILL;
+                this->gait_part_leg[LF].current_gait_info=
+                        this->gait_part_leg[LF].gl_STANDSTILL;
+                this->gait_part_leg[LR].current_gait_info=
+                        this->gait_part_leg[LR].gl_STANDSTILL;
+
+                //init actions
+                for(int i=0;i<6;i++)
+                {
+                    init_gait(gait_part_leg[i],gait_part_leg[i].next_gait_info,data.time);
+                }
+
+                this->gait_part_body.current_gait_info=this->gait_part_body.gb_STANDSTILL;
+
+                gait_part_body.set_original_position(bodyPeLast);
+                gait_part_body.set_destiny_position(gait_part_body.current_gait_info.delta_position);
+                gait_part_body.set_start_time(data.time);
+
+            }
+            //            else
+            {
+#ifdef IMU
+                param.imu_data->toEulBody2Ground(imuEul,PI);
+                bodyPeCurrent[3]=imuEul[0];
+                bodyPeCurrent[4]=imuEul[1];
+                bodyPeCurrent[5]=imuEul[2];
+#endif
+                for(int i=0;i<6;i++)
+                {
+                    BodyPeG[i]=this->bodyPeCurrent[i];
+                }
+
+                //generate next leg point
+                this->gait_part_leg[LF].get_next_target_position(this->gait_part_leg[LF].next_target_position,data.time,this->leg_status[LF]);
+                this->gait_part_leg[LM].get_next_target_position(this->gait_part_leg[LM].next_target_position,data.time,this->leg_status[LM]);
+                this->gait_part_leg[LR].get_next_target_position(this->gait_part_leg[LR].next_target_position,data.time,this->leg_status[LR]);
+                this->gait_part_leg[RF].get_next_target_position(this->gait_part_leg[RF].next_target_position,data.time,this->leg_status[RF]);
+                this->gait_part_leg[RM].get_next_target_position(this->gait_part_leg[RM].next_target_position,data.time,this->leg_status[RM]);
+                this->gait_part_leg[RR].get_next_target_position(this->gait_part_leg[RR].next_target_position,data.time,this->leg_status[RR]);
+
+
+
+                //detect and switching gait
+                for(int i=0;i<6;i++)
+                {
+                    //IsSwitching and m_NextGaitInfo is set by legGait[i].RunGait(); TBD!!!!!!!!!!!!!!!!!!!!!!!!!
+                    if(gait_part_leg[i].is_need_switching)
+                    {
+                        init_gait(gait_part_leg[i],gait_part_leg[i].next_gait_info,data.time);
+
+                    }
+                }
+
+
+                //generate next body point
+                gait_part_body.get_next_target_position(gait_part_body.next_target_position,data.time,this->body_status);
+
+                //calculate next pIN
+                for(int i=0;i<6;i++)
+                {
+                    BodyPeG[i]=gait_part_body.next_target_position[i];
+                    bodyPeCurrent[i]=gait_part_body.next_target_position[i];
+                    bodyPeLast[i]=gait_part_body.next_target_position[i];
+                }
+
+                get_target_pee_robot(pEE);
+
+                robot.SetPeb(gait_part_body.next_target_position,beginMak);
+                robot.SetPee(pEE,beginMak);
+
+                //                Robot.SetPee(pEE,GaitPartBody.targetEndPos,"G");
+                //                Robot.GetPin(pIN);
+                //                for(int i=0;i<18;i++)
+                //                {
+                //                    m_commandModelDataMapped[i].Postion=pIN[i];
+
+                //                }
+
+                //                PostProcess(data);
+
+                //                //for safe
+                //                this->Safety(data);
+
+
+
+                // end jump section for test only
+                int Count;
+                Count=0;
+                for(int i=0;i<6;i++)
+                {
+                    if(this->gait_part_leg[i].current_gait_info.gait==GAIT_STANDSTILL)
+                    {
+                        Count++;
+                    }
+                }
+                if(Count==6)
+                {
+                    this->set_standstill_data(data);
+                    data=this->standstill_machine_data;
+//                    rt_printf("CLIMB FINISHED\n");
+                    // this is a symbol that we can use outside the object
+                    wait_time--;
+                    if(wait_time<0)
+                    {
+                        this->next_motion=ERS_RNST;
+                        //here we do some reset works
+                        for(int i=0;i<6;i++)
+                        {
+                            gait_part_leg[i].is_active=false;
+                            gait_part_leg[i].is_need_switching=false;
+                        }
+                        robot.GetPin(pIN);
+                        rt_printf("Last position\n");
+                        for(int i=0;i<18;i++)
+                        {
+                            rt_printf("%f\n",pIN[i]);
+                        }
+                        rt_printf("CLIMB BACK FINISHED\n");
+                    }
+
+                }
+
+
+            }
+
+            break;
+        }
+        default:
+            break;
+        }
+        break;
+    }
+
     default:
         rt_printf("Default %d\n",next_motion);
         this->set_standstill_data(data);
@@ -1652,10 +2340,10 @@ void force_gait::GaitRobot::run_gait_robot(
     }
 
     int err=0;
-    err=rt_dev_sendto(robot_log.file_id_real_time
-                      ,&temperary_log_data
-                      ,sizeof(temperary_log_data)
-                      ,0,NULL,0);
+//    err=rt_dev_sendto(robot_log.file_id_real_time
+//                      ,&temperary_log_data
+//                      ,sizeof(temperary_log_data)
+//                      ,0,NULL,0);
 
 }
 
@@ -1747,8 +2435,8 @@ void force_gait::GaitRobot::init_gait(GaitPart<3> &gp, GaitInformation<3> nextGa
         if(gp.id%2==0)
         {
             // new threshold for fastdyn
-            gp.thrsehold_z_positive.set_threshold(gp.limit_z_positive_lo,gp.limit_z_positive_hi);
-            gp.thrsehold_z_positive.reset();
+            gp.threshold_z_positive.set_threshold(gp.limit_z_positive_lo,gp.limit_z_positive_hi);
+            gp.threshold_z_positive.reset();
             gp.current_gait_info=nextGaitInfo;
             //adjust DestinyEndPos according to M coordinates
             //x y cooridinate is ok
@@ -1789,8 +2477,8 @@ void force_gait::GaitRobot::init_gait(GaitPart<3> &gp, GaitInformation<3> nextGa
         else
         {
             // new threshold for fastdyn
-            gp.thrsehold_z_positive.set_threshold(gp.limit_z_positive_lo,gp.limit_z_positive_hi);
-            gp.thrsehold_z_positive.reset();
+            gp.threshold_z_positive.set_threshold(gp.limit_z_positive_lo,gp.limit_z_positive_hi);
+            gp.threshold_z_positive.reset();
             gp.current_gait_info=nextGaitInfo;
             //adjust DestinyEndPos according to M coordinates
             //x y cooridinate is ok
@@ -1828,6 +2516,107 @@ void force_gait::GaitRobot::init_gait(GaitPart<3> &gp, GaitInformation<3> nextGa
         gp.set_start_time(time);
         gp.is_need_switching=false;
         break;
+    case GAIT_MAJOR_BACKWARD:
+    {
+        rt_printf("GAIT_MAJOR_BACKWARD init %s.\n",LEG_NAME[gp.id]);
+        if(gp.id%2==0)
+        {
+            // new threshold for fastdyn
+            gp.threshold_z_positive.set_threshold(gp.limit_z_positive_lo,gp.limit_z_positive_hi);
+            gp.threshold_z_positive.reset();
+
+            gp.threshold_z_negative.set_threshold(gp.limit_z_negative_lo,gp.limit_z_negative_hi);
+            gp.threshold_z_negative.reset();
+
+
+            gp.current_gait_info=nextGaitInfo;
+            //adjust DestinyEndPos according to M coordinates
+            //x y cooridinate is ok
+            gp.current_gait_info.delta_position[0]=0;
+            gp.current_gait_info.delta_position[1]=0;
+            //adjust Z to a proper position relative to m_ObstacleRefPosM
+
+            // this z offset may include
+
+            gp.current_gait_info.delta_position[2]=
+                    gp.gait_ref_position_body_coord[2]+
+                    gp.gl_MAJOR_BACKWARD.delta_position[2]-
+                    leg_status[gp.id].foot_position_ref_coord[2];
+            rt_printf("DELTA POS Z %s %f\n",
+                      LEG_NAME[gp.id],
+                      gp.current_gait_info.delta_position[2]);
+
+
+            //  this value is determined by MINOR_UP_BACKWARD
+            //  0.03(backward displacement) + 0.05(foot radius)
+            if(gp.current_gait_info.delta_position[2]<0.10)
+            {
+                gp.current_gait_info.delta_position[2]=0.10;
+
+            }
+
+            rt_printf("DELTA POS Z %s %f\n",
+                      LEG_NAME[gp.id],
+                      gp.current_gait_info.delta_position[2]);
+
+            gp.current_gait_info.total_steps=
+                    (int)(gp.current_gait_info.delta_position[2]/gp.current_gait_info.velocity[2]);
+
+        }
+        else
+        {
+            // new threshold for fastdyn
+            gp.threshold_z_positive.set_threshold(gp.limit_z_positive_lo,gp.limit_z_positive_hi);
+            gp.threshold_z_positive.reset();
+
+            gp.threshold_z_negative.set_threshold(gp.limit_z_negative_lo,gp.limit_z_negative_hi);
+            gp.threshold_z_negative.reset();
+
+
+            gp.current_gait_info=nextGaitInfo;
+            //adjust DestinyEndPos according to M coordinates
+            //x y cooridinate is ok
+            gp.current_gait_info.delta_position[0]=0;
+            gp.current_gait_info.delta_position[1]=0;
+            //adjust Z to a proper position relative to m_ObstacleRefPosM
+
+            gp.current_gait_info.delta_position[2]=
+                    gp.gait_ref_position_body_coord[2]-
+                    leg_status[gp.id].foot_position_ref_coord[2];
+
+            //  this value is determined by MINOR_UP_BACKWARD
+            //  0.03(backward displacement) + 0.05(foot radius)
+            if(gp.current_gait_info.delta_position[2]<0.10)
+            {
+                gp.current_gait_info.delta_position[2]=0.10;
+
+            }
+
+            rt_printf("DELTA POS Z %s %f\n",
+                      LEG_NAME[gp.id],
+                      gp.current_gait_info.delta_position[2]);
+
+            gp.current_gait_info.total_steps=
+                    (int)(gp.current_gait_info.delta_position[2]/gp.current_gait_info.velocity[2]);
+
+        }
+
+
+        //        gp.SetOriginPos(LegState[gp.ID].footPosG);
+        //this is the last target position
+        rt_printf("%f,%f,%f\n",gp.next_target_position[0]
+                ,gp.next_target_position[1]
+                ,gp.next_target_position[2]);
+        rt_printf("%f,%f,%f\n",gp.current_gait_info.delta_position[0]
+                ,gp.current_gait_info.delta_position[1]
+                ,gp.current_gait_info.delta_position[2]);
+        gp.set_original_position(gp.next_target_position);
+        //FirstInitGait is used to determine DeltaEndPos
+        gp.set_destiny_position(gp.current_gait_info.delta_position);
+        gp.set_start_time(time);
+        gp.is_need_switching=false;
+        break;
+    }
     case GAIT_MAJOR_DOWN:
         rt_printf("GAIT_MAJOR_DOWN init %s.\n",LEG_NAME[gp.id]);
         gp.threshold_y_positive.set_threshold(gp.limit_y_positive_lo,gp.limit_y_positive_hi);
@@ -1892,6 +2681,47 @@ void force_gait::GaitRobot::init_gait(GaitPart<3> &gp, GaitInformation<3> nextGa
                 gp.current_gait_info.delta_position[1],
                 gp.current_gait_info.delta_position[2]);
         break;
+    case GAIT_MINOR_UP_FORWARD:
+    {
+        rt_printf("GAIT_MINOR_UP_FORWARD init %s.\n",LEG_NAME[gp.id]);
+        gp.current_gait_info=nextGaitInfo;
+
+        //this is all right;
+        //        gp.SetOriginPos(LegState[gp.ID].footPosG);
+
+        //2016-04-21 here we use next_target_position rather than destiny_position
+        // in fact, all of them should use next_target_position, or the gait is unbreakable.
+        // but
+        gp.set_original_position(gp.next_target_position);
+
+        //FirstInitGait is used to determine DeltaEndPos
+        //x z is ok
+        //check if y is too high
+        if((gp.current_gait_info.delta_position[1]+leg_status[gp.id].foot_position_ref_coord[1])
+                >gp.position_limit[1][0])
+        {
+            rt_printf("can't back\n");
+            gp.current_gait_info.delta_position[1]=gp.position_limit[1][0]-leg_status[gp.id].foot_position_ref_coord[1];
+        }
+
+
+        gp.set_destiny_position(gp.current_gait_info.delta_position);
+        gp.set_start_time(time);
+
+
+
+        gp.is_need_switching=false;
+        rt_printf("%f,%f,%f\n",
+                  gp.destiny_position[0],
+                gp.destiny_position[1],
+                gp.destiny_position[2]);
+        rt_printf("%f,%f,%f\n",gp.current_gait_info.delta_position[0],
+                gp.current_gait_info.delta_position[1],
+                gp.current_gait_info.delta_position[2]);
+        break;
+
+        break;
+    }
     case GAIT_STANDSTILL:
         rt_printf("GAIT_STANDSTILL init %s.\n",LEG_NAME[gp.id]);
         gp.current_gait_info=nextGaitInfo;
@@ -1924,8 +2754,8 @@ void force_gait::GaitRobot::init_gait(GaitPart<3> &gp, GaitInformation<3> nextGa
         break;
 
     case GAIT_LOCAL_CYCLE_FOREWARD:
-        gp.thrsehold_z_positive.set_threshold(100,200);
-        gp.thrsehold_z_positive.reset();
+        gp.threshold_z_positive.set_threshold(100,200);
+        gp.threshold_z_positive.reset();
         //maybe the following value is too big
 
         //        gp.thrZpositive.setThr(100,500);
@@ -1971,8 +2801,8 @@ void force_gait::GaitRobot::init_gait(GaitPart<3> &gp, GaitInformation<3> nextGa
         // start point of cycle backward
         // reverse need more careful
         gp.current_gait_info=nextGaitInfo;
-        gp.thrsehold_z_positive.set_threshold(gp.limit_z_positive_lo,gp.limit_z_positive_hi);
-        gp.thrsehold_z_positive.reset();
+        gp.threshold_z_positive.set_threshold(gp.limit_z_positive_lo,gp.limit_z_positive_hi);
+        gp.threshold_z_positive.reset();
 
         // this pos[2] is used to calclaute initAngle
         double pos[2]={leg_status[gp.id].foot_postion_abs_coord[2],leg_status[gp.id].foot_postion_abs_coord[1]};
@@ -2154,40 +2984,6 @@ void force_gait::GaitRobot::init_gait(GaitPart<3> &gp, GaitInformation<3> nextGa
         }
 
     }
-    //    if(gp.currentGaitInfo.gait==GAIT_H2S)
-    //    {
-    //        rt_printf("#############################################################################\n");
-    //        rt_printf("Information about GAIT_H2S at leg %d:\n",gp.ID);
-    //        rt_printf("Total Steps: %d\n",gp.currentGaitInfo.totalSteps);
-    //        rt_printf("Delta Pos: %f %f %f\n"
-    //                  ,gp.currentGaitInfo.deltaPos[0]
-    //                ,gp.currentGaitInfo.deltaPos[1]
-    //                ,gp.currentGaitInfo.deltaPos[2]);
-    //        rt_printf("Tacc:%f %f %f Tcon:%f %f %f Tdec:%f %f %f\n"
-    //                  ,gp.currentGaitInfo.Tacc[0]
-    //                ,gp.currentGaitInfo.Tacc[1]
-    //                ,gp.currentGaitInfo.Tacc[2]
-    //                ,gp.currentGaitInfo.Tcon[0]
-    //                ,gp.currentGaitInfo.Tcon[1]
-    //                ,gp.currentGaitInfo.Tcon[2]
-    //                ,gp.currentGaitInfo.Tdec[0]
-    //                ,gp.currentGaitInfo.Tdec[1]
-    //                ,gp.currentGaitInfo.Tdec[2]);
-    //        rt_printf("Acc:%f %f %f Vel:%f %f %f Dec:%f %f %f\n"
-    //                  ,gp.currentGaitInfo.actualAcc[0]
-    //                ,gp.currentGaitInfo.actualAcc[1]
-    //                ,gp.currentGaitInfo.actualAcc[2]
-    //                ,gp.currentGaitInfo.actualVel[0]
-    //                ,gp.currentGaitInfo.actualVel[1]
-    //                ,gp.currentGaitInfo.actualVel[2]
-    //                ,gp.currentGaitInfo.actualDec[0]
-    //                ,gp.currentGaitInfo.actualDec[1]
-    //                ,gp.currentGaitInfo.actualDec[2]);
-    //        rt_printf("#############################################################################");
-
-
-
-    //    }
 
 }
 
@@ -2197,6 +2993,39 @@ void force_gait::GaitRobot::init_gait(GaitPart<6> &gp, GaitInformation<6> nextGa
     //TBD
     switch(nextGaitInfo.gait)
     {
+    case GAIT_MAJOR_BACKWARD:
+    {
+        gp.current_gait_info=nextGaitInfo;
+
+        gp.set_original_position(this->bodyPeLast);
+        rt_printf("PeCurrent: %f %f %f \n",this->bodyPeCurrent[0],this->bodyPeCurrent[1],this->bodyPeCurrent[2]);
+        //        gp.SetOriginPos(this->bodyEpLast);
+        rt_printf(" body original pos:\n %f %f %f\n%f %f %f\n",
+                  gp.original_position[0],
+                gp.original_position[1],
+                gp.original_position[2],
+                gp.original_position[3],
+                gp.original_position[4],
+                gp.original_position[5]);
+        gp.set_destiny_position(gp.current_gait_info.delta_position);
+        rt_printf(" body destiny pos:\n %f %f %f\n%f %f %f",
+                  gp.destiny_position[0],
+                gp.destiny_position[1],
+                gp.destiny_position[2],
+                gp.destiny_position[3],
+                gp.destiny_position[4],
+                gp.destiny_position[5]);
+
+        // 0.3 0.4 0.3 normal
+        // 0.1 0.2 0.1 high load
+        gp.current_gait_info.max_acceleration=0.1;
+        gp.current_gait_info.max_velocity=0.1;
+        gp.current_gait_info.max_deceleration=0.1;
+        gp.set_start_time(time);
+        gp.is_need_switching=false;
+        break;
+
+    }
     case GAIT_MAJOR_FORWARD:// along z axis
     {
         gp.current_gait_info=nextGaitInfo;
@@ -2676,39 +3505,13 @@ void force_gait::GaitRobot::debug_print_ee_actual_target(long long *time)
                 ,gait_part_leg[i].next_target_position[0]
                 ,gait_part_leg[i].next_target_position[1]
                 ,gait_part_leg[i].next_target_position[2]);
-
     }
     rt_printf("##### DEBUG INFO END #####\n");
-
-
 }
 
 // this function should be used before FirstInitGait
 void force_gait::GaitRobot::debug_print_gait_part_state(long long *time=NULL)
 {
-
-//    char LEG_NAME[6][3]={"LF","LM","LB","RF","RM","RB"};
-//    char GAIT_NAME[19][80]={
-//        "GAIT_NONE",
-//        "GAIT_POWEROFF",
-//        "GAIT_STOP",
-//        "GAIT_ENABLE",
-//        "GAIT_HOME",
-//        "GAIT_H2S",
-//        "GAIT_STANDSTILL",
-//        "GAIT_MAJOR_UP",
-//        "GAIT_MINOR_UP",
-//        "GAIT_MAJOR_FORWARD",
-//        "GAIT_MINOR_FORWARD",
-//        "GAIT_MAJOR_BACKWARD",
-//        "GAIT_MINOR_BACKWARD",
-//        "GAIT_MAJOR_DOWN",
-//        "GAIT_MINOR_DOWN",
-//        "GAIT_MINOR_UP_BACKWARD",
-//        "GAIT_STRAIGHT",
-//        "GAIT_LOCAL_CYCLE_FOREWARD",
-//        "GAIT_LOCAL_CYCLE_BACKWARD"
-//    };
 
     int if_has_current_step_1=0;
     for(int i=0;i<6;i++)

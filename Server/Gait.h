@@ -31,6 +31,7 @@ extern char LEG_NAME[][3];
 extern char GAIT_NAME[][80];
 
 extern peripherals::Log robot_log;
+extern LogData temperary_log_data;
 
 using namespace Aris::RT_CONTROL;
 using namespace aris::control;
@@ -164,13 +165,14 @@ enum EGAITS //gait for single endpoint
     GAIT_STANDSTILL,
     GAIT_MAJOR_UP,
     GAIT_MINOR_UP,
-    GAIT_MAJOR_FORWARD,
-    GAIT_MINOR_FORWARD,
+    GAIT_MAJOR_FORWARD,// foreward
+    GAIT_MINOR_FORWARD,// backward
     GAIT_MAJOR_BACKWARD,
     GAIT_MINOR_BACKWARD,
     GAIT_MAJOR_DOWN,
     GAIT_MINOR_DOWN,
-    GAIT_MINOR_UP_BACKWARD,
+    GAIT_MINOR_UP_BACKWARD,// foreward
+    GAIT_MINOR_UP_FORWARD,// backward
     GAIT_STRAIGHT,
 
     // added for blind walking
@@ -462,7 +464,7 @@ public:// Gait info
 
     //threshold
     Threshold threshold_y_positive;
-    Threshold thrsehold_z_positive;
+    Threshold threshold_z_positive;
     Threshold threshold_z_negative;
 
     //limit
@@ -477,8 +479,8 @@ public:// Gait info
     double limit_z_positive_hi=300.0;
     double limit_z_positive_lo=100.0;
 
-    double limit_z_negative_hi=-50.0;
-    double limit_z_negative_lo=-150.0;
+    double limit_z_negative_hi=-100.0;
+    double limit_z_negative_lo=-300.0;
 
     //****static gait reference library******//
     GaitInformation<> gl_H2S;
@@ -494,6 +496,7 @@ public:// Gait info
     GaitInformation<> gl_MINOR_FORWARD;
 
     GaitInformation<> gl_MINOR_UP_BACKWARD;
+    GaitInformation<> gl_MINOR_UP_FORWARD;
     GaitInformation<> gl_STANDSTILL;
 
     GaitInformation<> gl_LOCAL_CYCLE_FOREWARD;
@@ -595,6 +598,17 @@ GaitPart<N,T>::GaitPart()
         gl_MAJOR_FORWARD.velocity[i]=gl_MAJOR_FORWARD.delta_position[i]/((double)gl_MAJOR_FORWARD.total_steps);
     }
 
+    gl_MAJOR_BACKWARD.gait=GAIT_MAJOR_BACKWARD;
+    gl_MAJOR_BACKWARD.delta_position[0]=0;
+    gl_MAJOR_BACKWARD.delta_position[1]=0;
+    gl_MAJOR_BACKWARD.delta_position[2]=0.20;
+    gl_MAJOR_BACKWARD.total_steps=8000;
+    for(int i=0;i<3;i++)
+    {
+        gl_MAJOR_BACKWARD.velocity[i]=gl_MAJOR_BACKWARD.delta_position[i]/((double)gl_MAJOR_BACKWARD.total_steps);
+    }
+
+
     gl_MINOR_UP_BACKWARD.gait=GAIT_MINOR_UP_BACKWARD;
     gl_MINOR_UP_BACKWARD.delta_position[0]=0;
     gl_MINOR_UP_BACKWARD.delta_position[1]=0.05;//y
@@ -602,7 +616,17 @@ GaitPart<N,T>::GaitPart()
     gl_MINOR_UP_BACKWARD.total_steps=2000;
     for(int i=0;i<3;i++)
     {
-        gl_MINOR_UP.velocity[i]=gl_MINOR_UP.delta_position[i]/((double)gl_MINOR_UP.total_steps);
+        gl_MINOR_UP_BACKWARD.velocity[i]=gl_MINOR_UP_BACKWARD.delta_position[i]/((double)gl_MINOR_UP_BACKWARD.total_steps);
+    }
+
+    gl_MINOR_UP_FORWARD.gait=GAIT_MINOR_UP_FORWARD;
+    gl_MINOR_UP_FORWARD.delta_position[0]=0;
+    gl_MINOR_UP_FORWARD.delta_position[1]=0.05;//y
+    gl_MINOR_UP_FORWARD.delta_position[2]=-0.03;//z
+    gl_MINOR_UP_FORWARD.total_steps=2000;
+    for(int i=0;i<3;i++)
+    {
+        gl_MINOR_UP_FORWARD.velocity[i]=gl_MINOR_UP_FORWARD.delta_position[i]/((double)gl_MINOR_UP_FORWARD.total_steps);
     }
 
 
@@ -859,8 +883,8 @@ void GaitPart<N,T>::get_next_target_position(double pos[N],long long int time, L
                 //this->m_CurrentGaitInfo=this->gait_STANDSTILL;
                 //this->SetOriginPos(this->m_DestEndPos);
                 rt_printf("GAIT_MAJOR_UP pos end %s\n",LEG_NAME[id]);
-                this->next_gait_info=this->gl_MAJOR_FORWARD;
-                this->next_gait_info_by_force=this->gl_MINOR_UP_BACKWARD;
+                this->next_gait_info=this->gl_MAJOR_BACKWARD;
+                this->next_gait_info_by_force=this->gl_MINOR_UP_FORWARD;
                 this->next_gait_info_by_position=this->gl_MAJOR_DOWN;
                 this->is_need_switching=true;
                 break;
@@ -875,6 +899,19 @@ void GaitPart<N,T>::get_next_target_position(double pos[N],long long int time, L
                 this->next_gait_info_by_position=this->gl_STANDSTILL;
                 this->is_need_switching=true;
                 break;
+            case GAIT_MAJOR_BACKWARD:
+                rt_printf("GAIT_MAJOR_BACKWARD pos end %s\n",LEG_NAME[id]);
+                this->next_gait_info=this->next_gait_info_by_position;
+                this->next_gait_info_by_force=this->gl_STANDSTILL;
+
+                //added for blind walking after MAJOR_DOWN
+                //you should init gl_LOCAL_CYCLE_BACKWARD here,do it after 2016-04-30
+                this->next_gait_info_by_force=this->gl_LOCAL_CYCLE_BACKWARD;
+
+                this->next_gait_info_by_position=this->gl_STANDSTILL;
+                this->is_need_switching=true;
+                break;
+
             case GAIT_MAJOR_DOWN:
                 rt_printf("GAIT_MAJOR_DOWN pos end %f %s\n",this->threshold_y_positive.value,LEG_NAME[id]);
                 if(this->threshold_z_negative.is_on())
@@ -907,6 +944,14 @@ void GaitPart<N,T>::get_next_target_position(double pos[N],long long int time, L
                 this->next_gait_info_by_position=this->gl_MAJOR_DOWN;
                 this->is_need_switching=true;
                 break;
+            case GAIT_MINOR_UP_FORWARD:
+                rt_printf("GAIT_MINOR_UP_FORWARD pos end %s\n",LEG_NAME[id]);
+                this->next_gait_info=this->next_gait_info_by_position;
+                this->next_gait_info_by_force=this->gl_MINOR_UP_FORWARD;
+                this->next_gait_info_by_position=this->gl_MAJOR_DOWN;
+                this->is_need_switching=true;
+                break;
+
 
             case GAIT_LOCAL_CYCLE_FOREWARD:
                 rt_printf("GAIT_LOCAL_CYCLE_FOREWARD pos end %f %s\n",this->threshold_y_positive.value,LEG_NAME[id]);
@@ -966,10 +1011,81 @@ void GaitPart<N,T>::get_next_target_position(double pos[N],long long int time, L
                 this->nextGaitInfoForce=this->gl_LOCAL_CYCLE_BACKWARD;
                 this->nextGaitInfoPos=this->gl_LOCAL_CYCLE_BACKWARD;
                 */
+
+                /* see you later
+                // here we need to take a look at the surrondings
+
+                static double side_forces=0.0;
+                static double ratio=1.0;
+                static double y_positive_hi=600;
+                static int left_index=0;
+                static int right_index=0;
+
+                switch(this->id)
+                {
+                case 0://LF
+                    left_index=1;
+                    right_index=3;
+                    break;
+                case 1://LM
+                    left_index=2;
+                    right_index=0;
+                    break;
+                case 2://LR
+                    left_index=1;
+                    right_index=5;
+                    break;
+                case 3://RF
+                    left_index=0;
+                    right_index=4;
+                    break;
+                case 4://RM
+                    left_index=3;
+                    right_index=5;
+                    break;
+                case 5://RB
+                    left_index=4;
+                    right_index=2;
+                    break;
+                default:
+                    break;
+                }
+                side_forces=temperary_log_data.foot_tip_extern_force[left_index][1]
+                        +temperary_log_data.foot_tip_extern_force[right_index][1];
+                static bool is_stop;
+                is_stop=false;
+
+                if(side_forces<y_positive_hi*2*ratio)
+                if(is_stop)
+                {
+                    this->next_gait_info=this->gl_STANDSTILL;
+                    this->next_gait_info_by_force=this->gl_STANDSTILL;
+                    this->next_gait_info_by_position=this->gl_STANDSTILL;
+                    this->is_need_switching=true;
+                }
+                */
+
+                // this is because rm fault
+                if(this->id==4)
+                {
+                    if((temperary_log_data.foot_tip_extern_force[3][1]+
+                            temperary_log_data.foot_tip_extern_force[5][1])>1000.0)
+                        break;
+                    else
+                    {
+                        rt_printf("RM fault protection: RF %f RR %f\n"
+                                  ,temperary_log_data.foot_tip_extern_force[3][1]
+                                ,temperary_log_data.foot_tip_extern_force[5][1]);
+                    }
+                }
+
+
+
                 this->next_gait_info=this->gl_STANDSTILL;
                 this->next_gait_info_by_force=this->gl_STANDSTILL;
                 this->next_gait_info_by_position=this->gl_STANDSTILL;
                 this->is_need_switching=true;
+
                 break;
 
 
@@ -1002,11 +1118,11 @@ void GaitPart<N,T>::get_next_target_position(double pos[N],long long int time, L
             }
 
         }
-        else if(this->thrsehold_z_positive.is_on())
+        else if(this->threshold_z_positive.is_on())
         {
             switch (this->current_gait_info.gait) {
             case GAIT_MAJOR_FORWARD:
-                rt_printf("GAIT_MAJOR_FORWARD force end %f %s\n",this->thrsehold_z_positive.value,LEG_NAME[id]);
+                rt_printf("GAIT_MAJOR_FORWARD force end %f %s\n",this->threshold_z_positive.value,LEG_NAME[id]);
                 this->next_gait_info=this->next_gait_info_by_force;
                 this->next_gait_info_by_position=this->gl_MAJOR_FORWARD;
                 this->is_need_switching=true;
@@ -1025,6 +1141,24 @@ void GaitPart<N,T>::get_next_target_position(double pos[N],long long int time, L
             default:
                 break;
             }
+        }
+        else if(!this->threshold_z_negative.is_on())
+        {
+            switch (this->current_gait_info.gait)
+            {
+            case GAIT_MAJOR_BACKWARD:
+            {
+                rt_printf("GAIT_MAJOR_BACKWARD force end %f %s\n",this->threshold_z_positive.value,LEG_NAME[id]);
+                this->next_gait_info=this->next_gait_info_by_force;
+                this->next_gait_info_by_position=this->gl_MAJOR_BACKWARD;
+                this->is_need_switching=true;
+                break;
+
+            }
+            default:
+                break;
+            }
+
         }
 
 
@@ -1141,6 +1275,14 @@ void GaitPart<N,T>::get_next_target_position(double pos[N],long long int time, L
                     this->next_gait_info_by_position=this->gb_STANDSTILL;
                     this->is_need_switching=true;
                     break;
+                case GAIT_MAJOR_BACKWARD:
+                    rt_printf("Body GAIT_MAJOR_BACKWARD pos end\n");
+                    this->next_gait_info=this->next_gait_info_by_position;
+                    this->next_gait_info_by_force=this->gb_STANDSTILL;
+                    this->next_gait_info_by_position=this->gb_STANDSTILL;
+                    this->is_need_switching=true;
+                    break;
+
                 }
             }
 
@@ -1203,6 +1345,7 @@ public:
     //    Aris::Sensor::IMU imu;
 private:
     double imu_euler_angles[3];
+
 
 
 
@@ -1309,6 +1452,8 @@ private:
     Aris::Filter::CFilterFIR_I velocity_filter[MOTORS_NUM];
     Aris::Filter::CFilterFIR_I acceleration_filter[MOTORS_NUM];
     Aris::Filter::CFilterFIR_I force_filter[MOTORS_NUM];
+
+    Aris::Filter::CFilterFIR_I foot_external_force_filter[6][3];
 
     // 2016-04-19 imu output exists incontinuous point, so current filter is not usable
     //    Aris::Filter::CFilterFIR_I IMURawAngleFilter[3];

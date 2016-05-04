@@ -1,7 +1,7 @@
 #include "rofo2.h"
 #include<iostream>
 using namespace std;
-
+using namespace  Rofo;
 
 force_gait::GaitRobot rofo;
 
@@ -260,7 +260,7 @@ double adjustYTargetPee[18];
 //}
 */
 
-auto rofoEndParse(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)->void
+auto Rofo::rofoEndParse(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)->void
 {
     CLIMB_PARAM  param;
 /*
@@ -290,7 +290,7 @@ auto rofoEndParse(const std::string &cmd, const std::map<std::string, std::strin
     std::cout<<"finished parse  endclimb"<<std::endl;
 }
 
-auto rofoEndGait(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)->int
+auto Rofo::rofoEndGait(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)->int
 {
     rt_printf("end climb rt executed\n");
     auto &param = static_cast<const Robots::WalkParam &>(param_in);
@@ -307,11 +307,11 @@ auto rofoEndGait(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase
 }
 
 
-int RofoWalkInit()
+int Rofo::RofoWalkInit()
 {
 //    rofo.Robot.loadXml(_XML_PATH);
     rofo.init();
-    robot_log.init();
+//    robot_log.init();
 
 
     // need calcluate origin homed position then calculate the
@@ -352,10 +352,10 @@ int RofoWalkInit()
 
 
     }
-    rofo.gait_part_leg[force_gait::LR].limit_y_positive_hi=1300.0;
+    rofo.gait_part_leg[force_gait::LR].limit_y_positive_hi=900.0;
     rofo.gait_part_leg[force_gait::LM].limit_y_positive_hi=600*1.5;
     rofo.gait_part_leg[force_gait::RM].limit_y_positive_hi=600*1.5;
-    rofo.gait_part_leg[force_gait::LR].limit_z_positive_hi=600;
+    rofo.gait_part_leg[force_gait::LR].limit_z_positive_hi=300;
 
 
     rofo.current_motion=ERS_RNST;
@@ -386,7 +386,7 @@ int RofoWalkInit()
 
 }
 
-auto rofoParse(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)->void
+auto Rofo::rofoParse(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)->void
 {
     CLIMB_PARAM  param;
 
@@ -404,7 +404,7 @@ auto rofoParse(const std::string &cmd, const std::map<std::string, std::string> 
 
 }
 
-auto rofoGait(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)->int
+auto Rofo::rofoGait(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)->int
 {
 
 
@@ -464,7 +464,9 @@ auto rofoGait(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &p
         for(int i=0;i<18;i++)
         {
             // 2016-04-12: raw_data is already in abs layer, i think.
-            data.feedbackData[i].Position=param.motion_raw_data->at(i).feedback_pos;
+            // data.feedbackData[i].Position=param.motion_raw_data->at(i).feedback_pos;
+            // avoid acceleration noise problem
+            data.feedbackData[i].Position=param.last_motion_raw_data->at(i).target_pos;
             data.feedbackData[i].Torque=param.motion_raw_data->at(i).feedback_cur;
 
 
@@ -492,7 +494,7 @@ auto rofoGait(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &p
     else
     {
         // all things happen here
-        rofo.run_gait_robot(robot,ERG_FORWARD,data,param);
+        rofo.run_gait_robot(robot,ERG_BACKWARD,data,param);
     }
 
 //    if(param.count==0)
@@ -524,7 +526,7 @@ auto rofoGait(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &p
 
 }
 
-auto ayParse(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)->void
+auto Rofo::ayParse(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)->void
 {
     Ay_Param param;
 
@@ -593,7 +595,7 @@ auto ayParse(const std::string &cmd, const std::map<std::string, std::string> &p
     msg.copyStruct(param);
 }
 
-auto ayGait(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)->int
+auto Rofo::ayGait(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)->int
 {
     //a duplicated function of recoverGait()
     auto &robot = static_cast<Robots::RobotBase &>(model);
@@ -608,7 +610,7 @@ auto ayGait(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &par
         temp_log_data.raw_data_torque[i]=param.motion_raw_data->at(i).feedback_cur;
         temp_log_data.count=param.count;
     }
-    rt_dev_sendto(robot_log.file_id_real_time,&temp_log_data,sizeof(temp_log_data),0,NULL,0);
+//    rt_dev_sendto(robot_log.file_id_real_time,&temp_log_data,sizeof(temp_log_data),0,NULL,0);
 
     static aris::server::ControlServer &cs = aris::server::ControlServer::instance();
 

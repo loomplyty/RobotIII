@@ -10,18 +10,6 @@
 #include "unistd.h"
 #endif
 
-/*将以下注释代码添加到xml文件*/
-/*
-      <cwf default="cwf_param">
-        <cwf_param type="group">
-          <totalCount abbreviation="t" type="int" default="3000"/>
-          <distance abbreviation="d" type="double" default="0.5"/>
-          <height abbreviation="h" type="double" default="0.05"/>
-        </cwf_param>
-      </cwf>
-      <cwfs/>
-*/
-
 auto CWFParse(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg)->void
 {
     Robots::WalkParam param;
@@ -64,8 +52,7 @@ auto CWFGait(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &pa
     double forceOffsetAvg[6]{ 0 };
     double realForceData[6]{ 0 };
     double forceInBody[6];
-    const double forceThreshold[6]{ 40, 40, 40, 30, 30, 30 };//力传感器的触发阈值,单位N或Nm
-    const double forceAMFactor{ 1 };//传感器数值与实际力大小的转化系数
+    const double forceThreshold[6]{ 30, 30, 30, 20, 20, 20 };//力传感器的触发阈值,单位N或Nm
     //const double sensorPE[6]{ 0, 0, 0, PI, PI/2, 0 };
 
     //力传感器手动清零
@@ -85,22 +72,19 @@ auto CWFGait(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &pa
         for(int i = 0; i < 6; i++)
         {
             forceOffsetAvg[i] = forceOffsetSum[i] / 100;
-            realForceData[i]=(param.force_data->at(0).fce[i] - forceOffsetAvg[i]) / forceAMFactor;
-            //转换到机器人身体坐标系
-//            double sensorPM[16]{ 0 };
-//            aris::dynamic::s_pe2pm(sensorPE, sensorPM);
-//            aris::dynamic::s_pm_dot_v3(sensorPM, realForceData, forceInBody);
-//            aris::dynamic::s_pm_dot_v3(sensorPM, realForceData + 3, forceInBody + 3);
-            aris::dynamic::s_f2f(*robot.forceSensorMak().prtPm(), realForceData, forceInBody);
+            realForceData[i] = param.force_data->at(0).fce[i] - forceOffsetAvg[i];
         }
+        //转换到机器人身体坐标系
+        aris::dynamic::s_f2f(*robot.forceSensorMak().prtPm(), realForceData, forceInBody);
+
         //用于显示力的初始值
         if(param.count == 100)
         {
-            rt_printf("forceOffsetAvg: %f %f %f\n",forceOffsetAvg[0],forceOffsetAvg[1],forceOffsetAvg[5]);
+            rt_printf("forceOffsetAvg: %f %f %f\n", forceOffsetAvg[0], forceOffsetAvg[1], forceOffsetAvg[5]);
         }
         if(param.count % 1000 == 0)
         {
-            rt_printf("forceInBody: %f %f %f %f %f %f\n",forceInBody[0],forceInBody[1],forceInBody[2],forceInBody[3],forceInBody[4],forceInBody[5]);
+            rt_printf("forceInBody: %f %f %f %f %f %f\n", forceInBody[0], forceInBody[1], forceInBody[2], forceInBody[3], forceInBody[4], forceInBody[5]);
         }
 
         static Robots::WalkParam realParam = param;
