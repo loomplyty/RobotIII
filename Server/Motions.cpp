@@ -9,8 +9,8 @@
 
 #define GoUpStairLength_Enough 120000
 static double Gait_GoUpStair[18*GoUpStairLength_Enough];
-
- void GoStair::parseGoStair(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+static int GaitStairCount;
+ void GoStair::parseGoUpStair(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
 {
     GoStairParam param;
     for (auto &i:params)
@@ -50,6 +50,7 @@ static double Gait_GoUpStair[18*GoUpStairLength_Enough];
                 file.close();
 
                 param.gaitCount = gaitNum;
+                GaitStairCount=gaitNum;
 
                // std::unique_ptr<double> p(new double[gaitNum* 18]);
 
@@ -64,7 +65,7 @@ static double Gait_GoUpStair[18*GoUpStairLength_Enough];
                 cout<<"gaitnum:"<<gaitNum<<endl;
                // cout<<"pin 1: "<<param.pIn[0]<<" "<<param.pIn[17]<<" "<<param.pIn[18]<<endl;
                // cout<<"pin end: "<<param.pIn[gaitNum*18-17]<<" "<<param.pIn[gaitNum*18-16]<<" "<<param.pIn[gaitNum*18-1]<<endl;
-                cout<<"pin 1 global poiter: "<<Gait_GoUpStair[0]<<" "<<Gait_GoUpStair[17]<<" "<<Gait_GoUpStair[18]<<endl;
+               // cout<<"pin 1 global poiter: "<<Gait_GoUpStair[0]<<" "<<Gait_GoUpStair[17]<<" "<<Gait_GoUpStair[18]<<endl;
 
               //  walkFileMap.insert(std::make_pair(i.second, std::make_tuple(gaitNum, std::move(p))));
             //}
@@ -80,6 +81,12 @@ static double Gait_GoUpStair[18*GoUpStairLength_Enough];
 
  }
 
+ void GoStair::parseGoDownStair(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg)
+{
+     GoStairParam param;
+     param.gaitCount=GaitStairCount;
+     msg.copyStruct(param);
+ }
 
 int GoStair::GoUpStair(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
 {
@@ -101,6 +108,29 @@ int GoStair::GoUpStair(aris::dynamic::Model &model, const aris::dynamic::PlanPar
    return pSP.gaitCount-pSP.count-1;
 
 }
+
+
+int GoStair::GoDownStair(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in)
+{
+
+     auto &robot = static_cast<Robots::RobotBase &>(model);
+    auto &pSP=static_cast<const GoStair::GoStairParam &>(param_in);
+    if(pSP.count==0)
+    {
+        cout<<"go down stair begins"<<"gait length:"<<pSP.gaitCount<<endl;
+        cout<<"pin value"<<Gait_GoUpStair[0]<<" "<<Gait_GoUpStair[1]<<" "<<Gait_GoUpStair[17]<<endl;
+    }
+
+
+    if(pSP.count < pSP.gaitCount)
+    {
+         robot.SetPin(&Gait_GoUpStair[(pSP.gaitCount-pSP.count-1)*18]);
+    }
+
+   return pSP.gaitCount-pSP.count-1;
+
+}
+
 
 /*int fastWalk(ROBOT_BASE * pRobot, const GAIT_PARAM_BASE * pParam)
 {

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <aris.h>
 
 using namespace std;
 
@@ -29,6 +30,8 @@ public:
     static int rightedge_x[10];
     static int Terrain;
     void TerrainAnalyze(const float oriGridMap[120][120]);
+    void TerrainRecord(const float oriGridMap[120][120]);
+    void TerrainRecordAll(const float oriGridMap[120][120], double currentPm[4][4]);
 };
 
 #endif // VISION_TERRAIN0_H

@@ -28,9 +28,11 @@ struct GoStairParam final:public aris::server::GaitParamBase
 };
 
 
-void parseGoStair(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+void parseGoUpStair(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
+void parseGoDownStair(const std::string &cmd, const map<std::string, std::string> &params, aris::core::Msg &msg);
 
 int GoUpStair(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
+int GoDownStair(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase &param_in);
 
 }
 

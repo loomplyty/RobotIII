@@ -533,14 +533,16 @@
                   <beta abbreviation="b" type="double" default="0"/>
                 </wk_param>
             </wk>
-            <us default="us_param">
-              <us_param type="group">
-                <file type="string" abbreviation="f" default="/home/hex/Desktop/RobotIII/resource/gaits/upstair_pitch_roll.txt"/>
-              </us_param>
-            </us>
+            <gus default="gus_param">
+              <gus_param type="group">
+                <file type="string" abbreviation="f" default="/home/hex/Desktop/RobotIII/resource/gaits/upstair_new72000.txt"/>
+              </gus_param>
+            </gus>
+            <gds/>
             <ro/>
             <vwk/>
             <swk/>
+            <record/>
 
             <cwf default="cwf_param">
                 <cwf_param type="group">

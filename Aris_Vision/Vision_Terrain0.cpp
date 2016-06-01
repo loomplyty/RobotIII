@@ -173,3 +173,100 @@ void TerrainAnalysis::TerrainAnalyze(const float oriGridMap[120][120])
             Gridmapfile<<leftedge_z[0]<<" "<<rightedge_z[0];
     frame_num++;
 }
+void TerrainAnalysis::TerrainRecord(const float oriGridMap[120][120])
+{
+    float GridMap[120][120];
+    memcpy(GridMap, oriGridMap, 120*120*sizeof(float));
+    std::stringstream out;
+    out<<frame_num;
+    std::string filename = "GridMap" + out.str() + ".txt";
+    std::ofstream Gridmapfile(filename);
+    if (Gridmapfile.is_open())
+    {
+        for(int i = 0; i < 120; i++)
+        {
+            for(int j = 0; j < 120; j++)
+            {
+                Gridmapfile<<GridMap[i][j]<<" ";
+            }
+            Gridmapfile<<endl;
+        }
+    }
+           // Gridmapfile<<leftedge_z[0]<<" "<<rightedge_z[0];
+    frame_num++;
+}
+
+void  TerrainAnalysis::TerrainRecordAll(const float oriGridMap[120][120], double currentPm[4][4])
+{
+    const double terrainOffset=0.85;
+
+    const int gridL=120*5;
+    static int Nframe;
+    static float GridMapAll[gridL][gridL];
+
+    double reso=0.025;
+    //pre process of map
+    float GridmapLocal[120][120];
+    memcpy(GridmapLocal, oriGridMap, 120*120*sizeof(float));
+
+    for(int i=0;i<120;i++)
+        for(int j=0;j<120;j++)
+            if(GridmapLocal[i][j]!=0)
+                GridmapLocal[i][j]+=terrainOffset;
+
+    //connect map
+
+
+    for(int z_grid=0;z_grid<120;z_grid++)
+    {
+        for(int x_grid=0;x_grid<120;x_grid++)
+        {
+            double p2b[4]={reso*(x_grid-60),GridmapLocal[x_grid][z_grid],reso*z_grid,1};
+            double p2g[4];
+
+            aris::dynamic::s_pm_dot_pnt(*currentPm,p2b,p2g);
+
+
+          //  cout<<"p2b"<<p2b[0]<<" "<<p2b[1]<<" "<<p2b[2]<<endl;
+          //  cout<<"p2g"<<p2g[0]<<" "<<p2g[1]<<" "<<p2g[2]<<endl;
+
+            int grid2gX=p2g[0]/reso;
+            float grid2gY=p2g[1];
+            int grid2gZ=p2g[2]/reso;
+            //cout<<"grid2gY"<<grid2gY<<endl;
+
+            GridMapAll[grid2gX+gridL/2][grid2gZ+gridL/2]=max(grid2gY,GridMapAll[grid2gX+gridL/2][grid2gZ+gridL/2]);
+
+           // cout<<"mapelevation"<<GridMapAll[grid2gX+gridL/2][grid2gZ+gridL/2]<<endl;
+
+            if(x_grid==0&&z_grid==0)
+            {
+                for (int k=0;k<4;k++)
+                  cout<<"pm"<<currentPm[k][0]<<" "<<currentPm[k][1]<<" "<<currentPm[k][2]<<" "<<currentPm[k][3]<<endl;
+                  cout<<"p2b"<<p2b[0]<<" "<<p2b[1]<<" "<<p2b[2]<<endl;
+                  cout<<"p2g"<<p2g[0]<<" "<<p2g[1]<<" "<<p2g[2]<<endl;
+                  cout<<"grid2gx: "<<grid2gX+gridL/2<<"grid2gz: "<<grid2gZ+gridL/2<<endl;
+            }
+        }
+    }
+
+
+    // recording
+    std::stringstream out;
+    out<<Nframe;
+    std::string filename = "TerrainGridMap" + out.str() + ".txt";
+    std::ofstream Gridmapfile(filename);
+    if (Gridmapfile.is_open())
+    {
+        for(int i = 0; i < gridL; i++)
+        {
+            for(int j = 0; j < gridL; j++)
+            {
+                Gridmapfile<<GridMapAll[i][j]<<" ";
+            }
+            Gridmapfile<<endl;
+        }
+    }
+           // Gridmapfile<<leftedge_z[0]<<" "<<rightedge_z[0];
+    Nframe++;
+}

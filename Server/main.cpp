@@ -39,12 +39,36 @@ aris::sensor::KINECT kinect1;
 TerrainAnalysis terrainAnalysisResult;
 
 atomic_bool isTerrainAnalysisFinished(false);
+
 atomic_bool isSending(false);
 atomic_bool isStop(false);
 
 VISION_WALK_PARAM visionWalkParam;
 
+struct matrix44
+{
+    double pm[4][4];
+};
+
 aris::control::Pipe<int> visionPipe(true);
+aris::control::Pipe<matrix44> visionRecordPipe(true);
+
+static auto visionRecordThread = std::thread([]()
+{
+    while(true)
+    {
+        matrix44 currentPm;
+
+        visionRecordPipe.recvInNrt(currentPm);
+
+        auto visiondata = kinect1.getSensorData();
+        terrainAnalysisResult.TerrainRecordAll(visiondata.get().gridMap,currentPm.pm);
+        cout<<"big map recorded."<<endl;
+
+     }
+});
+
+
 
 static auto visionThread = std::thread([]()
 {
@@ -256,6 +280,29 @@ auto stopVisionWalkParse(const std::string &cmd, const std::map<std::string, std
     isStop = true;
 }
 
+auto mapShot(aris::dynamic::Model &model, const aris::dynamic::PlanParamBase & plan_param)->int
+{
+    auto &robot = static_cast<Robots::RobotBase &>(model);
+
+    matrix44 currentPm;
+    robot.GetPmb(*currentPm.pm);
+
+
+    rt_printf("currentPm.pm %f,%f,%f,%f\n",currentPm.pm[0][0],currentPm.pm[0][1],currentPm.pm[0][2],currentPm.pm[0][3]);
+    rt_printf("currentPm.pm %f,%f,%f,%f\n",currentPm.pm[1][0],currentPm.pm[1][1],currentPm.pm[1][2],currentPm.pm[1][3]);
+    rt_printf("currentPm.pm %f,%f,%f,%f\n",currentPm.pm[2][0],currentPm.pm[2][1],currentPm.pm[2][2],currentPm.pm[2][3]);
+    rt_printf("currentPm.pm %f,%f,%f,%f\n",currentPm.pm[3][0],currentPm.pm[3][1],currentPm.pm[3][2],currentPm.pm[3][3]);
+
+    visionRecordPipe.sendToNrt(currentPm);
+    return 0;
+}
+
+
+auto visionRecordParse(const std::string &cmd, const std::map<std::string, std::string> &params, aris::core::Msg &msg_out)->void
+{
+    aris::server::GaitParamBase param;
+    msg_out.copyStruct(param);
+}
 
 int main(int argc, char *argv[])
 {   
@@ -296,9 +343,12 @@ int main(int argc, char *argv[])
     rs.addCmd("wk", Robots::walkParse, Robots::walkGait);
     rs.addCmd("ro", Robots::resetOriginParse, Robots::resetOriginGait);
 
-    rs.addCmd("us", GoStair::parseGoStair,GoStair::GoUpStair);
+    rs.addCmd("gus", GoStair::parseGoUpStair,GoStair::GoUpStair);
+    rs.addCmd("gds", GoStair::parseGoDownStair,GoStair::GoDownStair);
+
     rs.addCmd("vwk", visionWalkParse, visionWalk);
     rs.addCmd("swk", stopVisionWalkParse, visionWalk);
+    rs.addCmd("record",visionRecordParse,mapShot);
 
     rs.addCmd("climb",Rofo::rofoParse,Rofo::rofoGait);
     rs.addCmd("edcl", Rofo::rofoEndParse,Rofo::rofoEndGait);
