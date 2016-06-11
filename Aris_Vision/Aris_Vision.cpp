@@ -261,6 +261,22 @@ void KINECT::updateData(VISION_DATA &data)
     frameNum++;
 }
 
+//void KINECT_BASE::init()
+//{
+//    mKinectStruct->mStatus = mKinectStruct->mContext.Init();
+//    mKinectStruct->CheckOpenNIError(mKinectStruct->mStatus, "initialize context");
+//    mKinectStruct->mapDepthMode.nFPS = 30;
+//    mKinectStruct->mapDepthMode.nXRes = 640;
+//    mKinectStruct->mapDepthMode.nYRes = 480;
+
+//    mKinectStruct->mStatus = mKinectStruct->mDepthGenerator.Create(mKinectStruct->mContext);
+//    mKinectStruct->CheckOpenNIError(mKinectStruct->mStatus, "Create depth Generator");
+//    mKinectStruct->mStatus = mKinectStruct->mDepthGenerator.SetMapOutputMode(mKinectStruct->mapDepthMode);
+//    mKinectStruct->CheckOpenNIError(mKinectStruct->mStatus, "Map Mode Set");
+//    mKinectStruct->mStatus  = mKinectStruct->mContext.StartGeneratingAll();
+//    mKinectStruct->CheckOpenNIError(mKinectStruct->mStatus, "Start View Cloud");
+//}
+
 void KINECT_BASE::init()
 {
     mKinectStruct->mStatus = mKinectStruct->mContext.Init();
@@ -269,12 +285,81 @@ void KINECT_BASE::init()
     mKinectStruct->mapDepthMode.nXRes = 640;
     mKinectStruct->mapDepthMode.nYRes = 480;
 
-    mKinectStruct->mStatus = mKinectStruct->mDepthGenerator.Create(mKinectStruct->mContext);
-    mKinectStruct->CheckOpenNIError(mKinectStruct->mStatus, "Create depth Generator");
-    mKinectStruct->mStatus = mKinectStruct->mDepthGenerator.SetMapOutputMode(mKinectStruct->mapDepthMode);
-    mKinectStruct->CheckOpenNIError(mKinectStruct->mStatus, "Map Mode Set");
-    mKinectStruct->mStatus  = mKinectStruct->mContext.StartGeneratingAll();
-    mKinectStruct->CheckOpenNIError(mKinectStruct->mStatus, "Start View Cloud");
+    xn::NodeInfoList liChains;
+    mKinectStruct->mContext.EnumerateProductionTrees(XN_NODE_TYPE_DEVICE, NULL, liChains, NULL);
+
+    //    string terrainKin = "A22596V01639310A";
+    //    string avoidKin = "A22596705513327A";
+    string terrainKin = "A22593B00192416A";
+    string avoidKin = "A22596703731327A";
+    string terrainKinNum;
+    string avoidKinNum;
+
+    for(int i = 1; i <= 8; i++)
+    {
+        ifstream serialFile;
+        ifstream devNumFile;
+        stringstream filename;
+        filename << i ;
+        string serailFileDir ="/sys/bus/usb/devices/usb2/2-1/2-1." + filename.str() + "/2-1." + filename.str() + ".1/serial";
+        string devNumFileDir ="/sys/bus/usb/devices/usb2/2-1/2-1." + filename.str() + "/2-1." + filename.str() + ".1/devnum";
+
+        serialFile.open(serailFileDir,ios::in);
+        devNumFile.open(devNumFileDir,ios::in);
+
+        if(serialFile.is_open())
+        {
+            string devSerial;
+            serialFile >> devSerial;
+            string devNum;
+            if(devSerial == terrainKin)
+            {
+                devNumFile >> devNum;
+                int i = std::stoi(devNum) + 2;
+                stringstream temp;
+                temp << i;
+                terrainKinNum = "045e/02bf@2/" + temp.str();
+                //cout<<terrainKinNum<<endl;
+            }
+            if(devSerial == avoidKin)
+            {
+                devNumFile >> devNum;
+                int i = std::stoi(devNum) + 2;
+                stringstream temp;
+                temp << i;
+                avoidKinNum = "045e/02bf@2/" + temp.str();
+                //cout<<avoidKinNum<<endl;
+            }
+
+        }
+    }
+
+    for(xn::NodeInfoList::Iterator itNode = liChains.Begin(); itNode != liChains.End(); ++ itNode)
+    {
+
+        xn::NodeInfo mNodeInf = *itNode;
+
+        string curDevSerial = mNodeInf.GetCreationInfo();
+
+        //cout<<curDevSerial<<endl;
+
+        if(curDevSerial == terrainKinNum)
+        {
+            xn::Device devNode;
+            mKinectStruct->mContext.CreateProductionTree(mNodeInf, devNode);
+
+            xn::Query mQuery;
+            mQuery.AddNeededNode(mNodeInf.GetInstanceName());
+
+            mKinectStruct->mStatus = mKinectStruct->mDepthGenerator.Create(mKinectStruct->mContext, &mQuery);
+
+            mKinectStruct->CheckOpenNIError(mKinectStruct->mStatus, "Create depth Generator");
+            mKinectStruct->mStatus = mKinectStruct->mDepthGenerator.SetMapOutputMode(mKinectStruct->mapDepthMode);
+            mKinectStruct->CheckOpenNIError(mKinectStruct->mStatus, "Map Mode Set");
+            mKinectStruct->mStatus  = mKinectStruct->mContext.StartGeneratingAll();
+            mKinectStruct->CheckOpenNIError(mKinectStruct->mStatus, "Start View Cloud");
+        }
+    }
 }
 
 void KINECT_BASE::release()
@@ -313,9 +398,13 @@ void KINECT_BASE::updateData(VISION_DATA &data)
             0, 0, 0, 1;
 
     Matrix4f kinectToRobot;
-    kinectToRobot<< 0.9989836, -0.001837780, -0.0450375377, 0.017682,
+    /*  kinectToRobot<< 0.9989836, -0.001837780, -0.0450375377, 0.017682,
             -0.038951129, 0.4676363607, -0.88306231020, 0.197015+0.038,
             0.02268406498, 0.88391903289, 0.46708947376, 0.561919,
+            0, 0, 0, 1;*/
+    kinectToRobot<< 0.9998, -0.0006, -0.0208, 0.0209,
+            -0.0183, 0.4584, -0.8885, 0.1986+0.038,
+            0.0101, 0.8887, 0.4583, 0.5634,
             0, 0, 0, 1;
 
     Matrix4f robotToWorld;

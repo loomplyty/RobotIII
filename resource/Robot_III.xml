@@ -535,7 +535,7 @@
             </wk>
             <gus default="gus_param">
               <gus_param type="group">
-                <file type="string" abbreviation="f" default="/home/hex/Desktop/RobotIII/resource/gaits/upstair_new72000.txt"/>
+                <file type="string" abbreviation="f" default="/home/hex/Desktop/RobotIII/resource/gaits/upstair_new90000.txt"/>
               </gus_param>
             </gus>
             <gds/>
