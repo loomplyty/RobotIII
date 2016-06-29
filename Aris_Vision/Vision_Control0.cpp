@@ -27,13 +27,13 @@ void visionAdjust(double *param_Adjust, bool *adjust_Finished)
     else
     {
         /*Move Closer*/
-        if((TerrainAnalysis::leftedge_z[0] < 32) || (TerrainAnalysis::leftedge_z[0] > 34))
+        if((TerrainAnalysis::leftedge_z[0] < 31) || (TerrainAnalysis::leftedge_z[0] > 33))
         {
             cout<<"MOVE FORWARD AND BACKWARD!"<<endl;
             double movez_data[3] = {0, 0, 0};
-            movez_data[2] = (TerrainAnalysis::leftedge_z[0] - 33)*0.025;
+            movez_data[2] = (TerrainAnalysis::leftedge_z[0] - 32)*0.025;
             /*max walk*/
-            if(TerrainAnalysis::leftedge_z[0] < 32)
+            if(TerrainAnalysis::leftedge_z[0] < 31)
             {
                 movez_data[2] = movez_data[2] < -0.325? -0.325 : movez_data[2];
             }
